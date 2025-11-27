@@ -307,7 +307,7 @@ export default function DashboardPage() {
                               {format(new Date(date), 'EEEE, MMMM d, yyyy')}
                             </span>
                             {hasIssue && (
-                              <AlertCircle className="text-orange-500" size={18} title="Discrepancy detected" />
+                              <AlertCircle className="text-orange-500" size={18} />
                             )}
                           </div>
                           <span className="text-sm text-gray-600">{hours} hours</span>
