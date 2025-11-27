@@ -78,16 +78,21 @@ export default function CheckInPage() {
       streamRef.current = stream;
       setCameraActive(true);
 
-      // Wait a bit for state to update, then set video source and scroll
+      // Wait a bit for state to update, then set video source
       setTimeout(() => {
         if (videoRef.current && streamRef.current) {
           videoRef.current.srcObject = streamRef.current;
 
-          // Scroll the video element into view (centered)
-          videoRef.current.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-          });
+          // Wait for video metadata to load (when dimensions are known)
+          videoRef.current.onloadedmetadata = () => {
+            // Scroll after video has proper dimensions
+            setTimeout(() => {
+              videoRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+              });
+            }, 300);
+          };
         }
       }, 100);
     } catch (err) {
