@@ -26,6 +26,10 @@ export type Elderly = {
   latitude?: number;
   longitude?: number;
   family_ids: string[];
+  regular_rate: number;
+  holiday_rate: number;
+  currency: string;
+  access_code: string;
   created_at: string;
 };
 
