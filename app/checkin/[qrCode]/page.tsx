@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { uploadPhoto } from '@/lib/storage';
 import { Camera, MapPin, LogIn, LogOut, Loader2 } from 'lucide-react';
 
 export default function CheckInPage() {
@@ -128,6 +129,18 @@ export default function CheckInPage() {
     setError('');
 
     try {
+      let photoUrl = null;
+
+      // Upload photo to storage if there is one
+      if (photo) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        photoUrl = await uploadPhoto(photo, elderly.id, timestamp);
+
+        if (!photoUrl) {
+          console.warn('Photo upload failed, continuing without photo');
+        }
+      }
+
       // Insert check-in/out record
       const { error: insertError } = await supabase
         .from('check_in_outs')
@@ -136,7 +149,7 @@ export default function CheckInPage() {
           caregiver_name: caregiverName,
           action,
           timestamp: new Date().toISOString(),
-          photo_url: photo,
+          photo_url: photoUrl,
           latitude: location?.lat,
           longitude: location?.lng,
         });
