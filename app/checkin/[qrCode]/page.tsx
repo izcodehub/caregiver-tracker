@@ -64,18 +64,29 @@ export default function CheckInPage() {
   };
 
   const startCamera = async () => {
+    setError('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' }
+        video: {
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setCameraActive(true);
-      }
+
+      streamRef.current = stream;
+      setCameraActive(true);
+
+      // Wait a bit for state to update, then set video source
+      setTimeout(() => {
+        if (videoRef.current && streamRef.current) {
+          videoRef.current.srcObject = streamRef.current;
+        }
+      }, 100);
     } catch (err) {
       console.error('Error accessing camera:', err);
-      setError('Could not access camera');
+      setError('Could not access camera. Please check permissions.');
+      setCameraActive(false);
     }
   };
 
@@ -270,7 +281,8 @@ export default function CheckInPage() {
                   ref={videoRef}
                   autoPlay
                   playsInline
-                  className="w-full rounded-lg"
+                  muted
+                  className="w-full rounded-lg bg-gray-900"
                 />
                 <button
                   type="button"
