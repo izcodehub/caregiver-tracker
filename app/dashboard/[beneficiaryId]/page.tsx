@@ -584,9 +584,9 @@ export default function DashboardPage() {
             <CaregiverBreakdown
               checkIns={checkIns}
               selectedMonth={selectedMonth}
-              regularRate={elderly.regular_rate}
-              holidayRate={elderly.holiday_rate}
-              currency={elderly.currency}
+              regularRate={elderly.regular_rate || 15}
+              holidayRate={elderly.holiday_rate || 22.5}
+              currency={elderly.currency || 'EUR'}
             />
           </div>
         )}
