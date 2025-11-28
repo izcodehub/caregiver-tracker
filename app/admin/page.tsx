@@ -21,6 +21,8 @@ export default function AdminPage() {
   const router = useRouter();
   const [clients, setClients] = useState<Beneficiary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeToday, setActiveToday] = useState(0);
+  const [totalCaregivers, setTotalCaregivers] = useState(0);
 
   useEffect(() => {
     // Check if user is admin
@@ -46,10 +48,54 @@ export default function AdminPage() {
 
       if (error) throw error;
       setClients(data || []);
+
+      // Load stats
+      await loadStats();
     } catch (error) {
       console.error('Error loading clients:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      // Get active check-ins today
+      const today = new Date().toISOString().split('T')[0];
+
+      // Count beneficiaries with active check-ins today
+      const { data: checkIns, error: checkInsError } = await supabase
+        .from('check_in_outs')
+        .select('beneficiary_id, action, timestamp')
+        .gte('timestamp', `${today}T00:00:00`)
+        .lte('timestamp', `${today}T23:59:59`)
+        .order('timestamp', { ascending: true });
+
+      if (checkInsError) throw checkInsError;
+
+      // Count unique beneficiaries with check-ins today
+      const beneficiariesWithActivity = new Set<string>();
+      if (checkIns) {
+        checkIns.forEach(ci => beneficiariesWithActivity.add(ci.beneficiary_id));
+      }
+      setActiveToday(beneficiariesWithActivity.size);
+
+      // Get total unique caregivers
+      const { data: caregivers, error: caregiversError } = await supabase
+        .from('check_in_outs')
+        .select('caregiver_name');
+
+      if (caregiversError) throw caregiversError;
+
+      const uniqueCaregivers = new Set<string>();
+      if (caregivers) {
+        caregivers.forEach(c => {
+          if (c.caregiver_name) uniqueCaregivers.add(c.caregiver_name);
+        });
+      }
+      setTotalCaregivers(uniqueCaregivers.size);
+    } catch (error) {
+      console.error('Error loading stats:', error);
     }
   };
 
@@ -114,7 +160,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Active Today</p>
-                <p className="text-2xl font-bold text-gray-900">-</p>
+                <p className="text-2xl font-bold text-gray-900">{activeToday}</p>
               </div>
             </div>
           </div>
@@ -126,7 +172,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total Caregivers</p>
-                <p className="text-2xl font-bold text-gray-900">-</p>
+                <p className="text-2xl font-bold text-gray-900">{totalCaregivers}</p>
               </div>
             </div>
           </div>
