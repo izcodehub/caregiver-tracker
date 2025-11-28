@@ -26,6 +26,8 @@ import {
   Mail,
   Phone,
   Home,
+  UserPlus,
+  X,
 } from 'lucide-react';
 import QRCodeGenerator from '@/components/QRCodeGenerator';
 import CalendarView from '@/components/CalendarView';
@@ -112,6 +114,11 @@ export default function DashboardPage() {
   const [showPhoto, setShowPhoto] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'calendar' | 'history' | 'financial' | 'info'>('calendar');
   const [selectedDayView, setSelectedDayView] = useState<{ date: Date; checkIns: CheckInOut[] } | null>(null);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberPhone, setNewMemberPhone] = useState('');
+  const [addingMember, setAddingMember] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -137,6 +144,20 @@ export default function DashboardPage() {
     };
   }, [beneficiaryId, selectedMonth]);
 
+  const loadFamilyMembers = async () => {
+    try {
+      const { data: familyData } = await supabase
+        .from('family_members')
+        .select('*')
+        .eq('beneficiary_id', beneficiaryId)
+        .order('role');
+
+      setFamilyMembers(familyData || []);
+    } catch (error) {
+      console.error('Error loading family members:', error);
+    }
+  };
+
   const loadData = async () => {
     try {
       // Load specific elderly data by ID
@@ -150,13 +171,7 @@ export default function DashboardPage() {
         setElderly(elderlyData);
 
         // Load family members
-        const { data: familyData } = await supabase
-          .from('family_members')
-          .select('*')
-          .eq('beneficiary_id', elderlyData.id)
-          .order('role');
-
-        setFamilyMembers(familyData || []);
+        await loadFamilyMembers();
 
         // Load check-ins for selected month
         const startDate = startOfMonth(selectedMonth);
@@ -231,6 +246,46 @@ export default function DashboardPage() {
     return grouped;
   };
 
+
+  const handleAddFamilyMember = async () => {
+    if (!newMemberName.trim() || !newMemberEmail.trim()) {
+      alert('Please enter both name and email');
+      return;
+    }
+
+    setAddingMember(true);
+    try {
+      const response = await fetch('/api/family-members/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          beneficiary_id: beneficiaryId,
+          name: newMemberName,
+          email: newMemberEmail,
+          phone: newMemberPhone,
+          role: 'secondary',
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to add family member');
+      }
+
+      // Reload family members
+      await loadFamilyMembers();
+
+      // Reset form and close modal
+      setNewMemberName('');
+      setNewMemberEmail('');
+      setNewMemberPhone('');
+      setShowAddMemberModal(false);
+    } catch (error: any) {
+      alert(error.message || 'Failed to add family member');
+    } finally {
+      setAddingMember(false);
+    }
+  };
 
   const hasDiscrepancy = (dayCheckIns: CheckInOut[]) => {
     const sorted = [...dayCheckIns].sort((a, b) =>
@@ -646,16 +701,60 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
+
+              {/* Primary Contact */}
+              {familyMembers.length > 0 && familyMembers.find(m => m.role === 'primary') && (
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Primary Contact</h3>
+                  {(() => {
+                    const primaryContact = familyMembers.find(m => m.role === 'primary');
+                    if (!primaryContact) return null;
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <User className="text-gray-400" size={16} />
+                          <span className="font-semibold text-gray-900">{primaryContact.name}</span>
+                        </div>
+                        {primaryContact.email && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="text-gray-400" size={16} />
+                            <a href={`mailto:${primaryContact.email}`} className="text-blue-600 hover:underline">
+                              {primaryContact.email}
+                            </a>
+                          </div>
+                        )}
+                        {primaryContact.phone && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="text-gray-400" size={16} />
+                            <a href={`tel:${primaryContact.phone}`} className="text-blue-600 hover:underline">
+                              {primaryContact.phone}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
 
             {/* Family Members Section */}
             <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Family Members</h2>
-              {familyMembers.length === 0 ? (
-                <p className="text-gray-600 text-center py-8">No family members registered</p>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Additional Family Members</h2>
+                <button
+                  onClick={() => setShowAddMemberModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <UserPlus size={20} />
+                  Add Family Member
+                </button>
+              </div>
+              {familyMembers.filter(m => m.role !== 'primary').length === 0 ? (
+                <p className="text-gray-600 text-center py-8">No additional family members</p>
               ) : (
                 <div className="grid md:grid-cols-2 gap-4">
-                  {familyMembers.map((member) => (
+                  {familyMembers.filter(m => m.role !== 'primary').map((member) => (
                     <div
                       key={member.id}
                       className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -819,6 +918,98 @@ export default function DashboardPage() {
               <XCircle size={24} />
             </button>
             <img src={showPhoto} alt="Check-in photo" className="w-full rounded-lg" />
+          </div>
+        </div>
+      )}
+
+      {/* Add Family Member Modal */}
+      {showAddMemberModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">Add Family Member</h3>
+              <button
+                onClick={() => setShowAddMemberModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="text-gray-400" size={20} />
+                  </div>
+                  <input
+                    type="text"
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="John Doe"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="text-gray-400" size={20} />
+                  </div>
+                  <input
+                    type="email"
+                    value={newMemberEmail}
+                    onChange={(e) => setNewMemberEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="john@example.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone (optional)
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Phone className="text-gray-400" size={20} />
+                  </div>
+                  <input
+                    type="tel"
+                    value={newMemberPhone}
+                    onChange={(e) => setNewMemberPhone(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="+33 6 12 34 56 78"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowAddMemberModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={addingMember}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddFamilyMember}
+                  disabled={addingMember}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                >
+                  {addingMember ? 'Adding...' : 'Add Member'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
