@@ -8,7 +8,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Database Types
 export type CheckInOut = {
   id: string;
-  elderly_id: string;
+  beneficiary_id: string;
   caregiver_name: string;
   action: 'check-in' | 'check-out';
   timestamp: string;

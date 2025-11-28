@@ -3,13 +3,13 @@ import { supabase } from './supabase';
 /**
  * Upload a photo to Supabase Storage
  * @param base64Photo - Base64 encoded photo string (data:image/jpeg;base64,...)
- * @param elderlyId - ID of the elderly person
+ * @param beneficiaryId - ID of the elderly person
  * @param timestamp - Timestamp for unique filename
  * @returns Public URL of the uploaded photo or null if failed
  */
 export async function uploadPhoto(
   base64Photo: string,
-  elderlyId: string,
+  beneficiaryId: string,
   timestamp: string
 ): Promise<string | null> {
   try {
@@ -27,7 +27,7 @@ export async function uploadPhoto(
 
     // Create unique filename: elderly-id/timestamp-random.jpg
     const randomSuffix = Math.random().toString(36).substring(7);
-    const filename = `${elderlyId}/${timestamp}-${randomSuffix}.jpg`;
+    const filename = `${beneficiaryId}/${timestamp}-${randomSuffix}.jpg`;
 
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage

@@ -17,7 +17,7 @@ export default function DashboardPage() {
     try {
       // Get the first elderly person
       const { data } = await supabase
-        .from('elderly')
+        .from('beneficiaries')
         .select('id')
         .limit(1)
         .single();

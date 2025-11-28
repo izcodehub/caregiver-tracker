@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
       role: user.role,
       name: user.name,
-      elderly_id: user.elderly_id,
+      beneficiary_id: user.beneficiary_id,
     };
 
     return NextResponse.json(userData);

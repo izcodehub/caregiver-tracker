@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Users, LogOut, Loader2, ChevronRight } from 'lucide-react';
 
-type Elderly = {
+type Beneficiary = {
   id: string;
   name: string;
   address: string;
@@ -19,7 +19,7 @@ type Elderly = {
 export default function AdminPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
-  const [clients, setClients] = useState<Elderly[]>([]);
+  const [clients, setClients] = useState<Beneficiary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function AdminPage() {
     }
 
     if (user.role !== 'admin') {
-      router.push(`/dashboard/${user.elderly_id}`);
+      router.push(`/dashboard/${user.beneficiary_id}`);
       return;
     }
 
@@ -40,7 +40,7 @@ export default function AdminPage() {
   const loadClients = async () => {
     try {
       const { data, error } = await supabase
-        .from('elderly')
+        .from('beneficiaries')
         .select('*')
         .order('name');
 
@@ -72,8 +72,8 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
-              <p className="text-gray-600 mt-1">Manage all clients and caregivers</p>
+              <h1 className="text-3xl font-bold text-gray-900">Caregiver Tracker</h1>
+              <p className="text-gray-600 mt-1">Admin Panel - Manage all clients and caregivers</p>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">

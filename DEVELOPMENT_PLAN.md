@@ -12,6 +12,22 @@
 
 ## Business Requirements
 
+### Core Purpose: Fraud Detection & Billing Verification
+The primary goal of this system is to **prevent agency fraud and overcharging**. Agencies often:
+- Charge for caregivers who never showed up
+- Inflate hours worked
+- Add fraudulent holiday surcharges
+
+Families currently receive two documents from agencies each month:
+1. **Calendar view** - Shows which caregiver came each day with check-in/out times
+2. **Monthly invoice** - Breakdown per caregiver with hours and amounts
+
+This app must generate **identical formats** so families can:
+- Compare side-by-side with agency documents
+- Spot discrepancies immediately
+- Verify hours claimed vs. actual presence
+- Challenge fraudulent charges with photo evidence
+
 ### Pricing Structure
 - **Regular rate:** €24.58/hour
 - **Holiday rate:** €24.58 × 1.25 + €6.15 = **€36.88/hour**
@@ -245,25 +261,42 @@ $$ LANGUAGE plpgsql;
 
 ---
 
-### Phase 5: Calendar View
-**Goal:** Visual calendar showing daily hours and amounts
+### Phase 5: Calendar View (Agency Format Matching)
+**Goal:** Visual calendar matching agency format for easy comparison
 
 **Tasks:**
-1. Create calendar component (month view)
-2. Show daily totals per cell
-3. Highlight holidays in red
-4. Click day to see detailed breakdown
-5. Navigate between months
+1. Create calendar component (month view) matching agency layout
+2. Color code days: green background (caregiver present), red border (caregiver left), white (no check-in)
+3. Show caregiver names per day
+4. Show check-in/out times per day
+5. Click day to see detailed breakdown with photos
+6. Navigate between months
+7. Add caregiver name autocomplete to prevent duplicate entries
 
 **UI Components:**
-- `components/CalendarView.tsx`
-- `components/DayDetailModal.tsx`
+- `components/CalendarView.tsx` - Main calendar grid
+- `components/DayDetailModal.tsx` - Day details with check-ins, photos, total hours
+- `components/CaregiverAutocomplete.tsx` - Name autocomplete for check-in form
 
-**Features:**
-- Color coding: regular days (white), Sundays (light blue), holidays (light red)
-- Show total hours per day
-- Show total amount per day
-- Click to expand and see per-caregiver breakdown
+**Color Coding Rules:**
+- **Green background** = Caregiver currently checked in (present now)
+- **Red border** = Caregiver checked out (was present, now left)
+- **White/empty** = No check-in recorded for that day
+- Show check-in/out times and caregiver names in each day cell
+
+**Day Detail Modal Features:**
+- List of all check-ins/outs with times
+- Caregiver names
+- Photos taken during check-in
+- Total hours for that day
+- Regular vs holiday hours breakdown
+- Total amount for that day
+
+**Autocomplete Implementation:**
+- Query distinct caregiver names from database
+- Filter as user types
+- Prevent duplicate names with different capitalizations
+- Add to check-in form at `/checkin/[qrCode]/page.tsx`
 
 ---
 
@@ -333,16 +366,17 @@ Then family URL becomes:
 
 ---
 
-### Phase 8: Export Functionality
-**Goal:** Generate CSV and PDF financial summaries
+### Phase 8: Export Functionality (Agency Format Matching)
+**Goal:** Generate exports matching agency format for line-by-line comparison
 
 **Tasks:**
-1. Create CSV export function
-2. Create PDF export function (using jsPDF or similar)
+1. Create CSV export matching agency format
+2. Create PDF export matching agency invoice layout
 3. Add export buttons to both admin and family dashboards
-4. Format data correctly for both formats
+4. Format data identically to agency documents
+5. Include all details needed for verification
 
-**CSV Format:**
+**CSV Format (matching agency format):**
 ```csv
 Client,Period,Caregiver,Regular Hours,Holiday Hours,Regular Rate,Holiday Rate,Regular Amount,Holiday Amount,Total
 Marie Dubois,November 2024,Sophie Lefebvre,85.5,8.0,24.58,36.88,2101.59,295.04,2396.63
@@ -350,12 +384,30 @@ Marie Dubois,November 2024,Marie Claire,32.0,0.0,24.58,36.88,786.56,0.00,786.56
 ,,,,Total,,,2888.15,295.04,3183.19
 ```
 
-**PDF Format:**
-- Header with client name and period
-- Table with caregiver breakdown
-- Summary totals
-- Generated date/time
-- Not an invoice - labeled as "Financial Summary"
+**PDF Format (matching agency invoice):**
+- Header: "Financial Summary - NOT AN INVOICE"
+- Client name and period (e.g., "November 2024")
+- Table with columns:
+  - Caregiver Name
+  - Regular Hours (decimal, e.g., 85.50h)
+  - Holiday Hours (decimal, e.g., 8.00h)
+  - Regular Amount (€)
+  - Holiday Amount (€)
+  - Subtotal (€)
+- Summary section:
+  - Total Regular Hours
+  - Total Holiday Hours
+  - Total Amount (€)
+- Footer: Generated date/time, app URL
+- Professional formatting matching agency style
+
+**Purpose:**
+Enable families to place this export next to agency invoice and compare:
+- Line-by-line caregiver hours
+- Holiday vs regular hour breakdown
+- Total amounts per caregiver
+- Overall monthly total
+- Identify any discrepancies or fraudulent charges
 
 **Libraries to use:**
 - CSV: Built-in JS (no library needed)

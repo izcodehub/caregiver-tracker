@@ -21,6 +21,8 @@ export default function CheckInPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [caregiverSuggestions, setCaregiverSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -28,12 +30,13 @@ export default function CheckInPage() {
   useEffect(() => {
     loadElderlyData();
     getCurrentLocation();
+    loadCaregiverNames();
   }, [qrCode]);
 
   const loadElderlyData = async () => {
     try {
       const { data, error } = await supabase
-        .from('elderly')
+        .from('beneficiaries')
         .select('*')
         .eq('qr_code', qrCode)
         .single();
@@ -46,6 +49,39 @@ export default function CheckInPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadCaregiverNames = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('check_in_outs')
+        .select('caregiver_name');
+
+      if (error) throw error;
+
+      // Get unique caregiver names
+      const uniqueNames = [...new Set(data.map(item => item.caregiver_name))];
+      setCaregiverSuggestions(uniqueNames.sort());
+    } catch (err) {
+      console.error('Error loading caregiver names:', err);
+    }
+  };
+
+  const handleNameChange = (value: string) => {
+    setCaregiverName(value);
+    setShowSuggestions(value.length > 0);
+  };
+
+  const handleSuggestionClick = (name: string) => {
+    setCaregiverName(name);
+    setShowSuggestions(false);
+  };
+
+  const getFilteredSuggestions = () => {
+    if (!caregiverName) return [];
+    return caregiverSuggestions.filter(name =>
+      name.toLowerCase().includes(caregiverName.toLowerCase())
+    ).slice(0, 5);
   };
 
   const getCurrentLocation = () => {
@@ -156,7 +192,7 @@ export default function CheckInPage() {
       const { error: insertError } = await supabase
         .from('check_in_outs')
         .insert({
-          elderly_id: elderly.id,
+          beneficiary_id: elderly.id,
           caregiver_name: caregiverName,
           action,
           timestamp: new Date().toISOString(),
@@ -238,18 +274,36 @@ export default function CheckInPage() {
             </div>
           )}
 
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Your Name
             </label>
             <input
               type="text"
               value={caregiverName}
-              onChange={(e) => setCaregiverName(e.target.value)}
+              onChange={(e) => handleNameChange(e.target.value)}
+              onFocus={() => setShowSuggestions(caregiverName.length > 0)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               placeholder="Enter your name"
               required
             />
+
+            {/* Autocomplete suggestions */}
+            {showSuggestions && getFilteredSuggestions().length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {getFilteredSuggestions().map((name, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSuggestionClick(name)}
+                    className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-900 transition-colors"
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>

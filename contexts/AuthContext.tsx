@@ -8,7 +8,7 @@ type User = {
   email: string;
   role: 'admin' | 'family';
   name: string;
-  elderly_id?: string;
+  beneficiary_id?: string;
 };
 
 type AuthContextType = {
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userData.role === 'admin') {
         router.push('/admin');
       } else {
-        router.push(`/dashboard/${userData.elderly_id}`);
+        router.push(`/dashboard/${userData.beneficiary_id}`);
       }
 
       return true;
