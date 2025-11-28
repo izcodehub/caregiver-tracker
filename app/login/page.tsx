@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Loader2, Lock, Mail, User, MapPin, DollarSign } from 'lucide-react';
+import { Loader2, Lock, Mail, User, MapPin, DollarSign, Plus, Trash2, Euro, Phone } from 'lucide-react';
 import LanguageToggle from '@/components/LanguageToggle';
 
 export default function LoginPage() {
@@ -12,13 +12,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [beneficiaryName, setBeneficiaryName] = useState('');
-  const [address, setAddress] = useState('');
+  const [street, setStreet] = useState('');
+  const [zip, setZip] = useState('');
+  const [city, setCity] = useState('');
+  const [country, setCountry] = useState('FR');
   const [regularRate, setRegularRate] = useState('');
   const [holidayRate, setHolidayRate] = useState('');
   const [ticketModerateur, setTicketModerateur] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Family members
+  const [familyMembers, setFamilyMembers] = useState<Array<{name: string; email: string; phone: string; role: string}>>([
+    { name: '', email: '', phone: '', role: 'primary' }
+  ]);
 
   const { login } = useAuth();
   const { t } = useLanguage();
@@ -43,9 +51,15 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Detect country from address
-      const country = detectCountryFromAddress(address);
+      // Build full address
+      const fullAddress = `${street}, ${zip} ${city}, ${country}`;
       const currency = country === 'FR' ? '€' : '$';
+
+      // Validate at least one family member with email
+      const validFamilyMembers = familyMembers.filter(fm => fm.email && fm.name);
+      if (validFamilyMembers.length === 0) {
+        throw new Error('Please add at least one family member with name and email');
+      }
 
       // Create account via API
       const response = await fetch('/api/auth/signup', {
@@ -56,12 +70,16 @@ export default function LoginPage() {
           password,
           name,
           beneficiaryName,
-          address,
+          address: fullAddress,
+          street,
+          zip,
+          city,
           country,
           currency,
           regularRate: parseFloat(regularRate),
           holidayRate: parseFloat(holidayRate),
           ticketModerateur: ticketModerateur ? parseFloat(ticketModerateur) : 0,
+          familyMembers: validFamilyMembers,
         }),
       });
 
@@ -76,16 +94,35 @@ export default function LoginPage() {
       // Clear form
       setName('');
       setBeneficiaryName('');
-      setAddress('');
+      setStreet('');
+      setZip('');
+      setCity('');
       setRegularRate('');
       setHolidayRate('');
       setTicketModerateur('');
       setPassword('');
+      setFamilyMembers([{ name: '', email: '', phone: '', role: 'primary' }]);
     } catch (err: any) {
       setError(err.message || 'An error occurred during signup');
     } finally {
       setLoading(false);
     }
+  };
+
+  const addFamilyMember = () => {
+    setFamilyMembers([...familyMembers, { name: '', email: '', phone: '', role: 'secondary' }]);
+  };
+
+  const removeFamilyMember = (index: number) => {
+    if (familyMembers.length > 1) {
+      setFamilyMembers(familyMembers.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateFamilyMember = (index: number, field: string, value: string) => {
+    const updated = [...familyMembers];
+    updated[index] = { ...updated[index], [field]: value };
+    setFamilyMembers(updated);
   };
 
   const detectCountryFromAddress = (address: string): string => {
@@ -242,26 +279,62 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('auth.address') || 'Beneficiary Address'}
+              {/* Address Fields */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  {t('beneficiaryAddress') || 'Beneficiary Address'}
                 </label>
+
+                {/* Street */}
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <MapPin className="text-gray-400" size={20} />
                   </div>
                   <input
                     type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                    placeholder="123 Rue de la Paix, 75001 Paris, France"
+                    placeholder="1 rue Rivoli"
                     required
                   />
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  {t('auth.addressHelp') || 'Used to determine holiday calendar (France, US, etc.)'}
-                </p>
+
+                {/* Zip and City */}
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    value={zip}
+                    onChange={(e) => setZip(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    placeholder="75001"
+                    required
+                  />
+                  <input
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    placeholder="Paris"
+                    required
+                  />
+                </div>
+
+                {/* Country */}
+                <select
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  required
+                >
+                  <option value="FR">France</option>
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="UK">United Kingdom</option>
+                  <option value="DE">Germany</option>
+                  <option value="ES">Spain</option>
+                  <option value="IT">Italy</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -271,7 +344,7 @@ export default function LoginPage() {
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <DollarSign className="text-gray-400" size={20} />
+                      <Euro className="text-gray-400" size={20} />
                     </div>
                     <input
                       type="number"
@@ -279,7 +352,7 @@ export default function LoginPage() {
                       value={regularRate}
                       onChange={(e) => setRegularRate(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                      placeholder="15.00"
+                      placeholder="15.00€"
                       required
                     />
                   </div>
@@ -291,7 +364,7 @@ export default function LoginPage() {
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <DollarSign className="text-gray-400" size={20} />
+                      <Euro className="text-gray-400" size={20} />
                     </div>
                     <input
                       type="number"
@@ -299,7 +372,7 @@ export default function LoginPage() {
                       value={holidayRate}
                       onChange={(e) => setHolidayRate(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                      placeholder="22.50"
+                      placeholder="22.50€"
                       required
                     />
                   </div>
@@ -308,12 +381,12 @@ export default function LoginPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ticket Moderateur (%)
+                  {t('copay') || 'Co-payment'} (%)
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <DollarSign className="text-gray-400" size={20} />
-                  </div>
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 text-sm">
+                    %
+                  </span>
                   <input
                     type="number"
                     step="0.01"
@@ -326,7 +399,7 @@ export default function LoginPage() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
-                  Percentage you pay (e.g., 22.22%). Leave empty for 0%. Insurance covers the rest.
+                  {t('copayHelp') || 'Percentage you pay (e.g., 22.22%). Leave empty for 0%. Insurance covers the rest.'}
                 </p>
               </div>
 
@@ -367,6 +440,86 @@ export default function LoginPage() {
                     minLength={6}
                   />
                 </div>
+              </div>
+
+              {/* Family Members Section */}
+              <div className="space-y-3 border-t border-gray-200 pt-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {t('familyMembers') || 'Family Members'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addFamilyMember}
+                    className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    <Plus size={16} />
+                    {t('addFamilyMember') || 'Add Family Member'}
+                  </button>
+                </div>
+
+                {familyMembers.map((member, index) => (
+                  <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-gray-600">
+                        {index === 0 ? (t('primaryContact') || 'Primary Contact') : `${t('familyMember') || 'Family Member'} ${index + 1}`}
+                      </span>
+                      {familyMembers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeFamilyMember(index)}
+                          className="text-red-600 hover:bg-red-50 p-1 rounded transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Name */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <User className="text-gray-400" size={16} />
+                      </div>
+                      <input
+                        type="text"
+                        value={member.name}
+                        onChange={(e) => updateFamilyMember(index, 'name', e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        placeholder={t('auth.name') || 'Name'}
+                        required
+                      />
+                    </div>
+
+                    {/* Email */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="text-gray-400" size={16} />
+                      </div>
+                      <input
+                        type="email"
+                        value={member.email}
+                        onChange={(e) => updateFamilyMember(index, 'email', e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        placeholder={t('auth.email') || 'Email'}
+                        required
+                      />
+                    </div>
+
+                    {/* Phone */}
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Phone className="text-gray-400" size={16} />
+                      </div>
+                      <input
+                        type="tel"
+                        value={member.phone}
+                        onChange={(e) => updateFamilyMember(index, 'phone', e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        placeholder={t('auth.phone') || 'Phone (optional)'}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <button

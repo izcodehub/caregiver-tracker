@@ -10,11 +10,15 @@ export async function POST(request: NextRequest) {
       name,
       beneficiaryName,
       address,
+      street,
+      zip,
+      city,
       country,
       currency,
       regularRate,
       holidayRate,
       ticketModerateur,
+      familyMembers,
     } = await request.json();
 
     // Validate required fields
@@ -105,27 +109,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create family member record (the person who signed up is the primary family contact)
-    const { error: familyMemberError } = await supabase
-      .from('family_members')
-      .insert({
+    // Create family member records
+    if (familyMembers && familyMembers.length > 0) {
+      const familyMemberRecords = familyMembers.map((member: any) => ({
         beneficiary_id: beneficiaryData.id,
-        name,
-        email,
-        role: 'primary',
+        name: member.name,
+        email: member.email,
+        phone: member.phone || null,
+        role: member.role || 'secondary',
         notification_preferences: {
           email: true,
-          sms: false,
+          sms: member.phone ? true : false,
           push: true,
           check_in: true,
           check_out: true,
         },
-      });
+      }));
 
-    if (familyMemberError) {
-      console.error('Error creating family member:', familyMemberError);
-      // Note: We don't rollback here as the core account is created
-      // The family member can be added manually later if needed
+      const { error: familyMemberError } = await supabase
+        .from('family_members')
+        .insert(familyMemberRecords);
+
+      if (familyMemberError) {
+        console.error('Error creating family members:', familyMemberError);
+        // Note: We don't rollback here as the core account is created
+        // The family members can be added manually later if needed
+      }
+    } else {
+      // Fallback: Create a single family member record with the user who signed up
+      const { error: familyMemberError } = await supabase
+        .from('family_members')
+        .insert({
+          beneficiary_id: beneficiaryData.id,
+          name,
+          email,
+          role: 'primary',
+          notification_preferences: {
+            email: true,
+            sms: false,
+            push: true,
+            check_in: true,
+            check_out: true,
+          },
+        });
+
+      if (familyMemberError) {
+        console.error('Error creating family member:', familyMemberError);
+      }
     }
 
     // Return success
