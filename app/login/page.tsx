@@ -61,14 +61,17 @@ export default function LoginPage() {
         throw new Error('Please add at least one family member with name and email');
       }
 
+      // Use primary contact (first family member) email and name for user account
+      const primaryContact = validFamilyMembers[0];
+
       // Create account via API
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email,
+          email: primaryContact.email,
           password,
-          name,
+          name: primaryContact.name,
           beneficiaryName,
           address: fullAddress,
           street,
@@ -92,7 +95,6 @@ export default function LoginPage() {
       setSuccess(t('auth.signupSuccess') || 'Account created successfully! Please log in.');
       setIsSignUp(false);
       // Clear form
-      setName('');
       setBeneficiaryName('');
       setStreet('');
       setZip('');
@@ -243,25 +245,6 @@ export default function LoginPage() {
             <form onSubmit={handleSignUp} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('auth.yourName') || 'Your Name'}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="text-gray-400" size={20} />
-                  </div>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                    placeholder={t('auth.yourNamePlaceholder') || 'Jean Dupont'}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('auth.beneficiaryName') || 'Beneficiary Name'}
                 </label>
                 <div className="relative">
@@ -403,45 +386,6 @@ export default function LoginPage() {
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('auth.email')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="text-gray-400" size={20} />
-                  </div>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                    placeholder="vous@exemple.com"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('auth.password')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="text-gray-400" size={20} />
-                  </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                    placeholder="••••••••"
-                    required
-                    minLength={6}
-                  />
-                </div>
-              </div>
-
               {/* Family Members Section */}
               <div className="space-y-3 border-t border-gray-200 pt-4">
                 <div className="flex items-center justify-between">
@@ -518,6 +462,24 @@ export default function LoginPage() {
                         placeholder={t('auth.phone') || 'Phone (optional)'}
                       />
                     </div>
+
+                    {/* Password - only for primary contact */}
+                    {index === 0 && (
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Lock className="text-gray-400" size={16} />
+                        </div>
+                        <input
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                          placeholder={t('auth.password') || 'Password'}
+                          required
+                          minLength={6}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
