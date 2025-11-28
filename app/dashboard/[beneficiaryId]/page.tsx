@@ -858,9 +858,9 @@ export default function DashboardPage() {
 
                         <div className="space-y-2">
                           {(() => {
-                            // Sort by timestamp (most recent first)
+                            // Sort by timestamp chronologically (oldest first) for pairing
                             const sorted = [...dayCheckIns].sort((a, b) =>
-                              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+                              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
                             );
 
                             // Group check-in/check-out pairs
@@ -871,7 +871,7 @@ export default function DashboardPage() {
                               if (processed.has(ci.id)) return;
 
                               if (ci.action === 'check-in') {
-                                // Find matching check-out
+                                // Find matching check-out (next check-out from same caregiver)
                                 const checkOut = sorted.find(
                                   (co) =>
                                     !processed.has(co.id) &&
@@ -884,13 +884,14 @@ export default function DashboardPage() {
                                 processed.add(ci.id);
                                 if (checkOut) processed.add(checkOut.id);
                               } else if (!processed.has(ci.id)) {
-                                // Orphan check-out (show as standalone on mobile)
+                                // Orphan check-out
                                 pairs.push({ checkIn: ci });
                                 processed.add(ci.id);
                               }
                             });
 
-                            return pairs.map((pair, idx) => {
+                            // Reverse to show most recent first
+                            return pairs.reverse().map((pair, idx) => {
                               const isActive = pair.checkIn.action === 'check-in' && !pair.checkOut;
 
                               return (
@@ -938,49 +939,51 @@ export default function DashboardPage() {
                                     )}
                                   </div>
 
-                                  {/* Desktop: Single line layout */}
-                                  <div className="hidden lg:flex items-center justify-between gap-4">
-                                    <div className="flex items-center gap-3 flex-1">
-                                      <User className="text-gray-600" size={18} />
-                                      <span className="font-medium text-gray-800">{pair.checkIn.caregiver_name}</span>
+                                  {/* Desktop: Check-in left, Check-out right */}
+                                  <div className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] gap-4 items-center">
+                                    {/* Left: Check-in */}
+                                    <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border-l-4 border-green-500">
+                                      <CheckCircle className="text-green-600" size={20} />
+                                      <div className="flex-1">
+                                        <p className="font-medium text-gray-800">{pair.checkIn.caregiver_name}</p>
+                                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                                          <Clock size={14} />
+                                          <span>{format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}</span>
+                                        </div>
+                                      </div>
                                     </div>
 
-                                    {/* Check-in */}
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle className="text-green-600" size={16} />
-                                      <span className="text-sm text-gray-700">
-                                        {format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}
-                                      </span>
+                                    {/* Center: Duration or status */}
+                                    <div className="text-center px-4">
+                                      {pair.checkOut ? (
+                                        <div className="text-base font-bold text-blue-600">
+                                          {(() => {
+                                            const duration = (new Date(pair.checkOut.timestamp).getTime() - new Date(pair.checkIn.timestamp).getTime()) / (1000 * 60 * 60);
+                                            return `${duration.toFixed(2)}h`;
+                                          })()}
+                                        </div>
+                                      ) : isActive ? (
+                                        <RunningTimer checkInTime={new Date(pair.checkIn.timestamp)} />
+                                      ) : (
+                                        <span className="text-sm text-gray-400">—</span>
+                                      )}
                                     </div>
 
-                                    {/* Arrow */}
-                                    <div className="text-gray-400">→</div>
-
-                                    {/* Check-out */}
+                                    {/* Right: Check-out */}
                                     {pair.checkOut ? (
-                                      <div className="flex items-center gap-2">
-                                        <XCircle className="text-red-600" size={16} />
-                                        <span className="text-sm text-gray-700">
-                                          {format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}
-                                        </span>
+                                      <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 border-l-4 border-red-500">
+                                        <XCircle className="text-red-600" size={20} />
+                                        <div className="flex-1">
+                                          <p className="font-medium text-gray-800">{pair.checkOut.caregiver_name}</p>
+                                          <div className="flex items-center gap-1 text-sm text-gray-600">
+                                            <Clock size={14} />
+                                            <span>{format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}</span>
+                                          </div>
+                                        </div>
                                       </div>
                                     ) : (
-                                      <div className="flex items-center gap-2">
-                                        {isActive ? (
-                                          <RunningTimer checkInTime={new Date(pair.checkIn.timestamp)} />
-                                        ) : (
-                                          <span className="text-sm text-gray-400 italic">No check-out</span>
-                                        )}
-                                      </div>
-                                    )}
-
-                                    {/* Duration or status */}
-                                    {pair.checkOut && (
-                                      <div className="text-sm font-semibold text-blue-600">
-                                        {(() => {
-                                          const duration = (new Date(pair.checkOut.timestamp).getTime() - new Date(pair.checkIn.timestamp).getTime()) / (1000 * 60 * 60);
-                                          return `${duration.toFixed(2)}h`;
-                                        })()}
+                                      <div className="flex items-center justify-center p-3 rounded-lg bg-gray-100 border-l-4 border-gray-300">
+                                        <span className="text-sm text-gray-400 italic">No check-out</span>
                                       </div>
                                     )}
                                   </div>
