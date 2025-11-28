@@ -33,6 +33,7 @@ type CaregiverBreakdownProps = {
   regularRate: number;
   holidayRate: number;
   currency: string;
+  copayPercentage: number;
 };
 
 export default function CaregiverBreakdown({
@@ -41,6 +42,7 @@ export default function CaregiverBreakdown({
   regularRate,
   holidayRate,
   currency,
+  copayPercentage,
 }: CaregiverBreakdownProps) {
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
@@ -244,6 +246,36 @@ export default function CaregiverBreakdown({
               </tfoot>
             </table>
           </div>
+
+          {/* Reste à charge (Patient's share) */}
+          {copayPercentage > 0 && (
+            <div className="mt-6 p-4 md:p-6 bg-blue-600 rounded-lg border-2 border-blue-700">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+                <div>
+                  <h3 className="text-base md:text-lg font-semibold text-white">
+                    {language === 'fr' ? 'Reste à Charge' : 'Patient\'s Share'}
+                  </h3>
+                  <p className="text-xs md:text-sm text-blue-100 mt-1">
+                    {language === 'fr'
+                      ? `Ticket Modérateur: ${formatNumber(copayPercentage, 2, language)}%`
+                      : `Co-payment: ${formatNumber(copayPercentage, 2, language)}%`
+                    }
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl md:text-3xl font-bold text-white">
+                    {currency}{formatNumber(totals.totalAmount * copayPercentage / 100, 2, language)}
+                  </p>
+                  <p className="text-xs md:text-sm text-blue-100 mt-1">
+                    {language === 'fr'
+                      ? `Assurance: ${currency}${formatNumber(totals.totalAmount * (100 - copayPercentage) / 100, 2, language)}`
+                      : `Insurance: ${currency}${formatNumber(totals.totalAmount * (100 - copayPercentage) / 100, 2, language)}`
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mt-6 p-3 md:p-4 bg-blue-50 rounded-lg border border-blue-200">
             <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2 text-sm md:text-base">

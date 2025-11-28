@@ -54,6 +54,7 @@ type Elderly = {
   currency?: string;
   regular_rate?: number;
   holiday_rate?: number;
+  ticket_moderateur?: number;
 };
 
 type FamilyMember = {
@@ -652,6 +653,7 @@ export default function DashboardPage() {
               regularRate={elderly.regular_rate || 15}
               holidayRate={elderly.holiday_rate || 22.5}
               currency={elderly.currency || 'EUR'}
+              copayPercentage={elderly.ticket_moderateur || 0}
             />
           </div>
         )}
