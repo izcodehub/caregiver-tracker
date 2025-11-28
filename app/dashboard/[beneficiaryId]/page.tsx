@@ -193,9 +193,9 @@ export default function DashboardPage() {
       checkIns,
       elderly.name,
       selectedMonth,
-      elderly.regular_rate,
-      elderly.holiday_rate,
-      elderly.currency
+      elderly.regular_rate || 15,
+      elderly.holiday_rate || 22.5,
+      elderly.currency || 'EUR'
     );
   };
 
