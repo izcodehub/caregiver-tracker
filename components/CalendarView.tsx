@@ -188,14 +188,20 @@ export default function CalendarView({ selectedMonth, checkIns, onDayClick }: Ca
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {/* Day headers */}
         {(language === 'fr'
-          ? ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-          : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-        ).map(day => (
-          <div key={day} className="text-center font-semibold text-gray-600 text-sm py-2">
-            {day}
+          ? ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+          : ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+        ).map((day, idx) => (
+          <div key={idx} className="text-center font-semibold text-gray-600 text-xs sm:text-sm py-1 sm:py-2">
+            <span className="sm:hidden">{day}</span>
+            <span className="hidden sm:inline">
+              {language === 'fr'
+                ? ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'][idx]
+                : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][idx]
+              }
+            </span>
           </div>
         ))}
 
@@ -213,7 +219,7 @@ export default function CalendarView({ selectedMonth, checkIns, onDayClick }: Ca
           return (
             <div
               key={day.toISOString()}
-              className={`min-h-24 p-2 rounded-lg cursor-pointer transition-all hover:shadow-md relative ${getCellStyle(status)} ${
+              className={`min-h-16 sm:min-h-24 p-1 sm:p-2 rounded-lg cursor-pointer transition-all hover:shadow-md relative ${getCellStyle(status)} ${
                 !isCurrentMonth ? 'opacity-40' : ''
               }`}
               onClick={() => dayCheckIns.length > 0 && onDayClick(day, dayCheckIns)}
@@ -234,27 +240,36 @@ export default function CalendarView({ selectedMonth, checkIns, onDayClick }: Ca
                 </div>
               )}
 
-              <div className="flex justify-between items-start mb-1">
-                <div className={`text-sm font-semibold ${
+              <div className="flex justify-between items-start mb-0.5 sm:mb-1">
+                <div className={`text-xs sm:text-sm font-semibold ${
                   isSameDay(day, new Date()) ? 'text-blue-600' : 'text-gray-700'
                 }`}>
                   {format(day, 'd')}
                 </div>
                 {dayHours > 0 && (
-                  <div className="text-xs font-semibold text-blue-600">
+                  <div className="text-[10px] sm:text-xs font-semibold text-blue-600">
                     {formatHours(dayHours)}
                   </div>
                 )}
               </div>
 
               {dayCheckIns.length > 0 && (
-                <div className="space-y-1">
-                  {caregivers.map((name, idx) => (
-                    <div key={idx} className="text-xs font-medium text-gray-800 truncate">
-                      {name}
-                    </div>
-                  ))}
-                  <div className="flex flex-wrap gap-1">
+                <div className="space-y-0.5 sm:space-y-1">
+                  {/* Hide caregiver names on mobile, show on desktop */}
+                  <div className="hidden sm:block">
+                    {caregivers.map((name, idx) => (
+                      <div key={idx} className="text-xs font-medium text-gray-800 truncate">
+                        {name}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Show just a dot indicator on mobile */}
+                  <div className="sm:hidden flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                    <span className="text-[10px] text-gray-600">{dayCheckIns.length}</span>
+                  </div>
+                  {/* Times - simplified on mobile */}
+                  <div className="hidden sm:flex flex-wrap gap-1">
                     {times.slice(0, 2).map((time, idx) => (
                       <span key={idx} className="text-xs text-gray-600">
                         {time}
@@ -266,7 +281,7 @@ export default function CalendarView({ selectedMonth, checkIns, onDayClick }: Ca
                   </div>
                   {/* Show running timer for active check-ins */}
                   {activeCheckIn && (
-                    <div className="mt-1">
+                    <div className="mt-0.5 sm:mt-1">
                       <RunningTimer checkInTime={activeCheckIn} />
                     </div>
                   )}

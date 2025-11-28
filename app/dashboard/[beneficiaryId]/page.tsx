@@ -354,25 +354,39 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              {user?.role === 'admin' && (
+        <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6">
+          <div className="flex flex-col gap-4">
+            {/* Top row: Back button and title */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex flex-col gap-2">
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={() => router.push('/admin')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors w-fit"
+                  >
+                    <ArrowLeft size={16} />
+                    <span className="hidden sm:inline">{t('dashboard.backToAdmin')}</span>
+                    <span className="sm:hidden">Admin</span>
+                  </button>
+                )}
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{t('dashboard.title')}</h1>
+                  <p className="text-sm md:text-base text-gray-600 mt-1">{t('dashboard.monitoring')} {elderly.name}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <LanguageToggle />
                 <button
-                  onClick={() => router.push('/admin')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
+                  onClick={logout}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
                 >
-                  <ArrowLeft size={16} />
-                  {t('dashboard.backToAdmin')}
+                  <LogOut size={16} />
+                  <span className="hidden sm:inline">{t('common.logout')}</span>
                 </button>
-              )}
-              <div>
-                <h1 className="text-3xl font-bold text-gray-800">{t('dashboard.title')}</h1>
-                <p className="text-gray-600 mt-1">{t('dashboard.monitoring')} {elderly.name}</p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <LanguageToggle />
+            {/* Bottom row: Export buttons - only on desktop */}
+            <div className="hidden md:flex gap-2">
               <button
                 onClick={exportFinancialSummary}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
@@ -388,13 +402,6 @@ export default function DashboardPage() {
               >
                 <Download size={16} />
                 {t('dashboard.detailedLog')}
-              </button>
-              <button
-                onClick={logout}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
-              >
-                <LogOut size={16} />
-                {t('common.logout')}
               </button>
             </div>
           </div>
@@ -458,50 +465,53 @@ export default function DashboardPage() {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-lg mb-6">
-          <div className="flex border-b border-gray-200">
+        <div className="bg-white rounded-lg shadow-lg mb-6 overflow-x-auto">
+          <div className="flex border-b border-gray-200 min-w-max">
             <button
               onClick={() => setActiveTab('calendar')}
-              className={`flex-1 px-6 py-4 text-center font-semibold transition-colors ${
+              className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-base font-semibold transition-colors whitespace-nowrap ${
                 activeTab === 'calendar'
                   ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              <Calendar className="inline-block mr-2" size={20} />
-              {t('dashboard.calendarView')}
+              <Calendar className="inline-block mr-1 sm:mr-2" size={16} />
+              <span className="hidden sm:inline">{t('dashboard.calendarView')}</span>
+              <span className="sm:hidden">Calendar</span>
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`flex-1 px-6 py-4 text-center font-semibold transition-colors ${
+              className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-base font-semibold transition-colors whitespace-nowrap ${
                 activeTab === 'history'
                   ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              <Clock className="inline-block mr-2" size={20} />
-              {t('dashboard.checkInHistory')}
+              <Clock className="inline-block mr-1 sm:mr-2" size={16} />
+              <span className="hidden sm:inline">{t('dashboard.checkInHistory')}</span>
+              <span className="sm:hidden">History</span>
             </button>
             <button
               onClick={() => setActiveTab('financial')}
-              className={`flex-1 px-6 py-4 text-center font-semibold transition-colors ${
+              className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-base font-semibold transition-colors whitespace-nowrap ${
                 activeTab === 'financial'
                   ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              <Euro className="inline-block mr-2" size={20} />
-              {t('dashboard.financialReview')}
+              <Euro className="inline-block mr-1 sm:mr-2" size={16} />
+              <span className="hidden sm:inline">{t('dashboard.financialReview')}</span>
+              <span className="sm:hidden">Financial</span>
             </button>
             <button
               onClick={() => setActiveTab('info')}
-              className={`flex-1 px-6 py-4 text-center font-semibold transition-colors ${
+              className={`flex-1 px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-base font-semibold transition-colors whitespace-nowrap ${
                 activeTab === 'info'
                   ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              <Info className="inline-block mr-2" size={20} />
+              <Info className="inline-block mr-1 sm:mr-2" size={16} />
               Info
             </button>
           </div>
