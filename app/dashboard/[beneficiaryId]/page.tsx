@@ -43,6 +43,7 @@ type CheckInOut = {
   photo_url?: string;
   latitude?: number;
   longitude?: number;
+  is_training?: boolean;
 };
 
 type Elderly = {

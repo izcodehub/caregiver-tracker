@@ -15,6 +15,7 @@ type CheckInOut = {
   photo_url?: string;
   latitude?: number;
   longitude?: number;
+  is_training?: boolean;
 };
 
 type CaregiverSummary = {
@@ -58,6 +59,11 @@ export default function CaregiverBreakdown({
     // Calculate hours for each check-in/check-out pair
     for (let i = 0; i < sorted.length - 1; i++) {
       if (sorted[i].action === 'check-in' && sorted[i + 1].action === 'check-out') {
+        // Skip training sessions (Binome ADV) - not charged
+        if (sorted[i].is_training) {
+          continue;
+        }
+
         const caregiverName = sorted[i].caregiver_name;
         const start = new Date(sorted[i].timestamp);
         const end = new Date(sorted[i + 1].timestamp);
