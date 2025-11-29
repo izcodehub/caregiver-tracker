@@ -127,9 +127,15 @@ export default function CheckInPage() {
     setCaregiverName(value);
     setShowSuggestions(value.length > 0);
 
-    // If user types a name that's already checked in, suggest check-out
-    if (activeCaregivers.includes(value) && action === 'check-in') {
-      setAction('check-out');
+    // Smart action switching based on name
+    if (activeCaregivers.length > 0) {
+      if (activeCaregivers.includes(value)) {
+        // Typing a name that's already checked in → switch to check-out
+        setAction('check-out');
+      } else if (value.length > 0 && !activeCaregivers.includes(value)) {
+        // Typing a different name (second caregiver) → switch to check-in
+        setAction('check-in');
+      }
     }
   };
 
