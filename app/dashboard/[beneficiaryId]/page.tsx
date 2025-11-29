@@ -574,71 +574,128 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {selectedDayView.checkIns.sort((a, b) =>
-                  new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-                ).map((ci) => (
-                  <div
-                    key={ci.id}
-                    className={`bg-white rounded-lg shadow-lg p-6 border-l-4 ${
-                      ci.action === 'check-in' ? 'border-green-500' : 'border-red-500'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4 flex-1">
-                        <div className={`p-3 rounded-lg ${
-                          ci.action === 'check-in' ? 'bg-green-100' : 'bg-red-100'
-                        }`}>
-                          {ci.action === 'check-in' ? (
-                            <CheckCircle className="text-green-600" size={28} />
-                          ) : (
-                            <XCircle className="text-red-600" size={28} />
-                          )}
-                        </div>
+                {(() => {
+                  // Sort chronologically for pairing
+                  const sorted = [...selectedDayView.checkIns].sort((a, b) =>
+                    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                  );
 
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-3">
-                            <User size={20} className="text-gray-600" />
-                            <span className="text-xl font-semibold text-gray-800">
-                              {ci.caregiver_name}
-                            </span>
+                  // Group check-in/check-out pairs
+                  const pairs: { checkIn: CheckInOut; checkOut?: CheckInOut }[] = [];
+                  const processed = new Set<string>();
+
+                  sorted.forEach((ci) => {
+                    if (processed.has(ci.id)) return;
+
+                    if (ci.action === 'check-in') {
+                      const checkOut = sorted.find(
+                        (co) =>
+                          !processed.has(co.id) &&
+                          co.action === 'check-out' &&
+                          co.caregiver_name === ci.caregiver_name &&
+                          new Date(co.timestamp).getTime() > new Date(ci.timestamp).getTime()
+                      );
+
+                      pairs.push({ checkIn: ci, checkOut });
+                      processed.add(ci.id);
+                      if (checkOut) processed.add(checkOut.id);
+                    } else if (!processed.has(ci.id)) {
+                      pairs.push({ checkIn: ci });
+                      processed.add(ci.id);
+                    }
+                  });
+
+                  // Reverse to show most recent first
+                  return pairs.reverse().map((pair, idx) => {
+                    const isActive = pair.checkIn.action === 'check-in' && !pair.checkOut;
+
+                    return (
+                      <div key={idx} className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+                        {/* Mobile: Stacked layout */}
+                        <div className="lg:hidden space-y-3">
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border-l-4 border-green-500">
+                            <CheckCircle className="text-green-600" size={24} />
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-800">{pair.checkIn.caregiver_name}</p>
+                              <div className="flex items-center gap-1 text-sm text-gray-600">
+                                <Clock size={14} />
+                                <span>{format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}</span>
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-2 text-gray-700 mb-2">
-                            <Clock size={18} />
-                            <span className="font-medium">{format(new Date(ci.timestamp), 'HH:mm:ss')}</span>
-                          </div>
-
-                          {ci.latitude && ci.longitude && (
-                            <div className="flex items-center gap-2 text-gray-600 mb-3">
-                              <MapPin size={18} />
-                              <span className="text-sm">
-                                {ci.latitude.toFixed(6)}, {ci.longitude.toFixed(6)}
-                              </span>
+                          {pair.checkOut && (
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 border-l-4 border-red-500">
+                              <XCircle className="text-red-600" size={24} />
+                              <div className="flex-1">
+                                <p className="font-semibold text-gray-800">{pair.checkOut.caregiver_name}</p>
+                                <div className="flex items-center gap-1 text-sm text-gray-600">
+                                  <Clock size={14} />
+                                  <span>{format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}</span>
+                                </div>
+                              </div>
                             </div>
                           )}
 
-                          {ci.photo_url && (
-                            <button
-                              onClick={() => setShowPhoto(ci.photo_url!)}
-                              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                            >
-                              <Camera size={18} />
-                              {t('dashboard.viewPhoto')}
-                            </button>
+                          {isActive && (
+                            <div className="pl-3">
+                              <RunningTimer checkInTime={new Date(pair.checkIn.timestamp)} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Desktop: Check-in left, Check-out right */}
+                        <div className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] gap-6 items-center">
+                          {/* Left: Check-in */}
+                          <div className="flex items-center gap-4 p-4 rounded-lg bg-green-50 border-l-4 border-green-500">
+                            <CheckCircle className="text-green-600" size={28} />
+                            <div className="flex-1">
+                              <p className="text-lg font-semibold text-gray-800">{pair.checkIn.caregiver_name}</p>
+                              <div className="flex items-center gap-2 text-gray-600 mt-1">
+                                <Clock size={16} />
+                                <span className="font-medium">{format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Center: Duration */}
+                          <div className="text-center px-4">
+                            {pair.checkOut ? (
+                              <div className="text-xl font-bold text-blue-600">
+                                {(() => {
+                                  const duration = (new Date(pair.checkOut.timestamp).getTime() - new Date(pair.checkIn.timestamp).getTime()) / (1000 * 60 * 60);
+                                  return `${duration.toFixed(2)}h`;
+                                })()}
+                              </div>
+                            ) : isActive ? (
+                              <RunningTimer checkInTime={new Date(pair.checkIn.timestamp)} />
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </div>
+
+                          {/* Right: Check-out */}
+                          {pair.checkOut ? (
+                            <div className="flex items-center gap-4 p-4 rounded-lg bg-red-50 border-l-4 border-red-500">
+                              <XCircle className="text-red-600" size={28} />
+                              <div className="flex-1">
+                                <p className="text-lg font-semibold text-gray-800">{pair.checkOut.caregiver_name}</p>
+                                <div className="flex items-center gap-2 text-gray-600 mt-1">
+                                  <Clock size={16} />
+                                  <span className="font-medium">{format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center p-4 rounded-lg bg-gray-100 border-l-4 border-gray-300">
+                              <span className="text-gray-400 italic">No check-out</span>
+                            </div>
                           )}
                         </div>
                       </div>
-
-                      <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                        ci.action === 'check-in'
-                          ? 'bg-green-200 text-green-800'
-                          : 'bg-red-200 text-red-800'
-                      }`}>
-                        {ci.action}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  });
+                })()}
               </div>
             )}
           </div>
