@@ -263,7 +263,7 @@ export default function CaregiverBreakdown({
       ) : (
         <>
           {/* Regular Hours Table */}
-          <div className="mb-6">
+          <div className="mb-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-3">
               {language === 'fr' ? 'Montant Normal HT' : 'Regular Amount (Before Tax)'} - {currency}{formatNumber(regularRate, 2, language)}/h
             </h3>
@@ -272,18 +272,26 @@ export default function CaregiverBreakdown({
               ← Swipe to see all columns →
             </div>
 
-            <div className="overflow-x-auto -mx-4 md:mx-0">
+            <div className="overflow-x-auto">
               <table className="w-full md:min-w-[600px]">
                 <thead>
                   <tr className="border-b-2 border-gray-300">
-                    <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10 whitespace-nowrap">
+                    <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10">
                       {t('financial.caregiver')}
                     </th>
-                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm whitespace-nowrap">
-                      {t('financial.regularHours')}
+                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
+                      <div className="md:whitespace-nowrap">
+                        <div>{language === 'fr' ? 'Heures' : 'Hours'}</div>
+                        <div>{language === 'fr' ? 'Normales' : 'Regular'}</div>
+                      </div>
                       <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
                     </th>
-                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm whitespace-nowrap">{t('financial.regularAmount')}</th>
+                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
+                      <div className="md:whitespace-nowrap">
+                        <div>{language === 'fr' ? 'Montant' : 'Amount'}</div>
+                        <div>{language === 'fr' ? 'Normal' : 'Regular'}</div>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -352,7 +360,7 @@ export default function CaregiverBreakdown({
 
           {/* Holiday Hours Table - Only show if there are holiday hours */}
           {totals.holidayHours > 0 && (
-            <div className="mb-6">
+            <div className="mb-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-3">
                 {language === 'fr' ? 'Montant Majoré HT' : 'Holiday Amount (Before Tax)'} - {currency}{formatNumber(holidayRate, 2, language)}/h
               </h3>
@@ -361,18 +369,26 @@ export default function CaregiverBreakdown({
                 ← Swipe to see all columns →
               </div>
 
-              <div className="overflow-x-auto -mx-4 md:mx-0">
+              <div className="overflow-x-auto">
                 <table className="w-full md:min-w-[600px]">
                   <thead>
                     <tr className="border-b-2 border-gray-300">
-                      <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10 w-1 whitespace-nowrap">
+                      <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10">
                         {t('financial.caregiver')}
                       </th>
-                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                        {t('financial.holidayHours')}
+                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
+                        <div className="md:whitespace-nowrap">
+                          <div>{language === 'fr' ? 'Heures' : 'Hours'}</div>
+                          <div>{language === 'fr' ? 'Majorées' : 'Holiday'}</div>
+                        </div>
                         <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
                       </th>
-                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">{t('financial.holidayAmount')}</th>
+                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
+                        <div className="md:whitespace-nowrap">
+                          <div>{language === 'fr' ? 'Montant' : 'Amount'}</div>
+                          <div>{language === 'fr' ? 'Majoré' : 'Holiday'}</div>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
