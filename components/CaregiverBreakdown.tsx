@@ -276,7 +276,7 @@ export default function CaregiverBreakdown({
               <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b-2 border-gray-300">
-                    <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10">
+                    <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10 w-1 whitespace-nowrap">
                       {t('financial.caregiver')}
                     </th>
                     <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
@@ -291,7 +291,7 @@ export default function CaregiverBreakdown({
                     const color = getColor(summary.name, caregiverColors, allCaregiverNames);
                     return (
                       <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="py-2 md:py-3 px-1 md:px-2 font-medium text-xs md:text-sm sticky left-0 bg-white">
+                        <td className="py-2 md:py-3 px-1 md:px-2 font-medium text-xs md:text-sm sticky left-0 bg-white w-1 whitespace-nowrap">
                           <span
                             className="px-2 py-1 rounded font-semibold"
                             style={{
@@ -314,7 +314,7 @@ export default function CaregiverBreakdown({
                   })}
                   {/* Total Hours Row */}
                   <tr className="border-t border-gray-300 bg-blue-50">
-                    <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-blue-50">
+                    <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-blue-50 w-1 whitespace-nowrap">
                       {language === 'fr' ? 'Total Heures' : 'Total Hours'}
                     </td>
                     <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm">
@@ -365,7 +365,7 @@ export default function CaregiverBreakdown({
                 <table className="w-full min-w-[600px]">
                   <thead>
                     <tr className="border-b-2 border-gray-300">
-                      <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10">
+                      <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10 w-1 whitespace-nowrap">
                         {t('financial.caregiver')}
                       </th>
                       <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
@@ -380,7 +380,7 @@ export default function CaregiverBreakdown({
                       const color = getColor(summary.name, caregiverColors, allCaregiverNames);
                       return (
                         <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="py-2 md:py-3 px-1 md:px-2 font-medium text-xs md:text-sm sticky left-0 bg-white">
+                          <td className="py-2 md:py-3 px-1 md:px-2 font-medium text-xs md:text-sm sticky left-0 bg-white w-1 whitespace-nowrap">
                             <span
                               className="px-2 py-1 rounded font-semibold"
                               style={{
@@ -403,7 +403,7 @@ export default function CaregiverBreakdown({
                     })}
                     {/* Total Hours Row */}
                     <tr className="border-t border-gray-300 bg-blue-50">
-                      <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-blue-50">
+                      <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-blue-50 w-1 whitespace-nowrap">
                         {language === 'fr' ? 'Total Heures' : 'Total Hours'}
                       </td>
                       <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm">

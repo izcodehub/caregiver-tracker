@@ -865,34 +865,34 @@ export default function DashboardPage() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Beneficiary Information</h2>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <User className="text-blue-600 mt-1" size={20} />
-                  <div>
+                  <User className="text-blue-600 mt-1 flex-shrink-0" size={20} />
+                  <div className="flex-1 min-w-0">
                     <div className="text-sm text-gray-600">Name</div>
-                    <div className="font-semibold text-gray-900">{elderly.name}</div>
+                    <div className="font-semibold text-gray-900 break-words">{elderly.name}</div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Home className="text-blue-600 mt-1" size={20} />
-                  <div>
+                  <Home className="text-blue-600 mt-1 flex-shrink-0" size={20} />
+                  <div className="flex-1 min-w-0">
                     <div className="text-sm text-gray-600">Address</div>
-                    <div className="font-semibold text-gray-900">{elderly.address}</div>
+                    <div className="font-semibold text-gray-900 break-words">{elderly.address}</div>
                   </div>
                 </div>
                 {elderly.country && (
                   <div className="flex items-start gap-3">
-                    <MapPin className="text-blue-600 mt-1" size={20} />
-                    <div>
+                    <MapPin className="text-blue-600 mt-1 flex-shrink-0" size={20} />
+                    <div className="flex-1 min-w-0">
                       <div className="text-sm text-gray-600">Country</div>
-                      <div className="font-semibold text-gray-900">{elderly.country}</div>
+                      <div className="font-semibold text-gray-900 break-words">{elderly.country}</div>
                     </div>
                   </div>
                 )}
                 {elderly.regular_rate && (
                   <div className="flex items-start gap-3">
-                    <Euro className="text-blue-600 mt-1" size={20} />
-                    <div>
+                    <Euro className="text-blue-600 mt-1 flex-shrink-0" size={20} />
+                    <div className="flex-1 min-w-0">
                       <div className="text-sm text-gray-600">Rates</div>
-                      <div className="font-semibold text-gray-900">
+                      <div className="font-semibold text-gray-900 break-words">
                         Regular: {elderly.currency}{elderly.regular_rate}/h
                         {' | '}
                         Holiday: {elderly.currency}{elderly.holiday_rate}/h
@@ -912,21 +912,21 @@ export default function DashboardPage() {
                     return (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <User className="text-gray-400" size={16} />
-                          <span className="font-semibold text-gray-900">{primaryContact.name}</span>
+                          <User className="text-gray-400 flex-shrink-0" size={16} />
+                          <span className="font-semibold text-gray-900 break-words">{primaryContact.name}</span>
                         </div>
                         {primaryContact.email && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail className="text-gray-400" size={16} />
-                            <a href={`mailto:${primaryContact.email}`} className="text-blue-600 hover:underline">
+                          <div className="flex items-center gap-2 text-sm min-w-0">
+                            <Mail className="text-gray-400 flex-shrink-0" size={16} />
+                            <a href={`mailto:${primaryContact.email}`} className="text-blue-600 hover:underline break-all">
                               {primaryContact.email}
                             </a>
                           </div>
                         )}
                         {primaryContact.phone && (
                           <div className="flex items-center gap-2 text-sm">
-                            <Phone className="text-gray-400" size={16} />
-                            <a href={`tel:${primaryContact.phone}`} className="text-blue-600 hover:underline">
+                            <Phone className="text-gray-400 flex-shrink-0" size={16} />
+                            <a href={`tel:${primaryContact.phone}`} className="text-blue-600 hover:underline break-words">
                               {primaryContact.phone}
                             </a>
                           </div>
@@ -940,14 +940,14 @@ export default function DashboardPage() {
 
             {/* Family Members Section */}
             <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">Additional Family Members</h2>
                 <button
                   onClick={() => setShowAddMemberModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
                 >
                   <UserPlus size={20} />
-                  Add Family Member
+                  <span className="text-sm sm:text-base">Add Family Member</span>
                 </button>
               </div>
               {familyMembers.filter(m => m.role !== 'primary').length === 0 ? (
@@ -959,28 +959,28 @@ export default function DashboardPage() {
                       key={member.id}
                       className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <User className="text-blue-600" size={20} />
-                          <div className="font-semibold text-gray-900">{member.name}</div>
+                      <div className="flex items-start justify-between mb-3 gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <User className="text-blue-600 flex-shrink-0" size={20} />
+                          <div className="font-semibold text-gray-900 break-words">{member.name}</div>
                         </div>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full capitalize">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full capitalize flex-shrink-0">
                           {member.role}
                         </span>
                       </div>
                       <div className="space-y-2">
                         {member.email && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail className="text-gray-400" size={16} />
-                            <a href={`mailto:${member.email}`} className="text-blue-600 hover:underline">
+                          <div className="flex items-center gap-2 text-sm min-w-0">
+                            <Mail className="text-gray-400 flex-shrink-0" size={16} />
+                            <a href={`mailto:${member.email}`} className="text-blue-600 hover:underline break-all">
                               {member.email}
                             </a>
                           </div>
                         )}
                         {member.phone && (
                           <div className="flex items-center gap-2 text-sm">
-                            <Phone className="text-gray-400" size={16} />
-                            <a href={`tel:${member.phone}`} className="text-blue-600 hover:underline">
+                            <Phone className="text-gray-400 flex-shrink-0" size={16} />
+                            <a href={`tel:${member.phone}`} className="text-blue-600 hover:underline break-words">
                               {member.phone}
                             </a>
                           </div>
