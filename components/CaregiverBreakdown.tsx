@@ -75,18 +75,35 @@ export default function CaregiverBreakdown({
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
-    // Calculate hours for each check-in/check-out pair
-    for (let i = 0; i < sorted.length - 1; i++) {
-      if (sorted[i].action === 'check-in' && sorted[i + 1].action === 'check-out') {
-        // Skip training sessions (Binome ADV) - not charged
-        if (sorted[i].is_training) {
-          continue;
-        }
+    const processed = new Set<string>();
 
-        const caregiverName = sorted[i].caregiver_name;
-        const start = new Date(sorted[i].timestamp);
-        const end = new Date(sorted[i + 1].timestamp);
+    // Calculate hours for each check-in/check-out pair
+    sorted.forEach((ci) => {
+      if (processed.has(ci.id)) return;
+
+      if (ci.action === 'check-in') {
+        // Skip training sessions (Binome ADV) - not charged
+        if (ci.is_training) return;
+
+        // Find matching check-out (next check-out from same caregiver)
+        const checkOut = sorted.find(
+          (co) =>
+            !processed.has(co.id) &&
+            co.action === 'check-out' &&
+            co.caregiver_name === ci.caregiver_name &&
+            new Date(co.timestamp).getTime() > new Date(ci.timestamp).getTime()
+        );
+
+        if (!checkOut) return;
+
+        const caregiverName = ci.caregiver_name;
+        const start = new Date(ci.timestamp);
+        const end = new Date(checkOut.timestamp);
         const totalMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+
+        // Mark both as processed
+        processed.add(ci.id);
+        processed.add(checkOut.id);
 
         if (!caregiverMap.has(caregiverName)) {
           caregiverMap.set(caregiverName, { regularHours: 0, holidayHours: 0 });
@@ -132,7 +149,7 @@ export default function CaregiverBreakdown({
           }
         }
       }
-    }
+    });
 
     // Convert to array and calculate amounts
     const summaries: CaregiverSummary[] = [];
@@ -164,29 +181,45 @@ export default function CaregiverBreakdown({
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
-    // Find training session pairs
-    for (let i = 0; i < sorted.length - 1; i++) {
-      if (sorted[i].action === 'check-in' &&
-          sorted[i + 1].action === 'check-out' &&
-          sorted[i].is_training) {
+    const processed = new Set<string>();
 
-        const caregiverName = sorted[i].caregiver_name;
-        const checkIn = new Date(sorted[i].timestamp);
-        const checkOut = new Date(sorted[i + 1].timestamp);
-        const hours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+    // Find training session pairs
+    sorted.forEach((ci) => {
+      if (processed.has(ci.id)) return;
+
+      if (ci.action === 'check-in' && ci.is_training) {
+        // Find matching check-out (next check-out from same caregiver)
+        const checkOut = sorted.find(
+          (co) =>
+            !processed.has(co.id) &&
+            co.action === 'check-out' &&
+            co.caregiver_name === ci.caregiver_name &&
+            new Date(co.timestamp).getTime() > new Date(ci.timestamp).getTime()
+        );
+
+        if (!checkOut) return;
+
+        const caregiverName = ci.caregiver_name;
+        const checkInTime = new Date(ci.timestamp);
+        const checkOutTime = new Date(checkOut.timestamp);
+        const hours = (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
+
+        // Mark both as processed
+        processed.add(ci.id);
+        processed.add(checkOut.id);
 
         if (!trainingMap.has(caregiverName)) {
           trainingMap.set(caregiverName, []);
         }
 
         trainingMap.get(caregiverName)!.push({
-          date: checkIn,
-          checkIn,
-          checkOut,
+          date: checkInTime,
+          checkIn: checkInTime,
+          checkOut: checkOutTime,
           hours,
         });
       }
-    }
+    });
 
     // Convert to array
     const trainingSummaries: TrainingSummary[] = [];
