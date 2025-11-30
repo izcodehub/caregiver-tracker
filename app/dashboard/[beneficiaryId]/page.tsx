@@ -1264,7 +1264,7 @@ export default function DashboardPage() {
                     type="text"
                     value={newMemberName}
                     onChange={(e) => setNewMemberName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     placeholder="John Doe"
                     required
                   />
@@ -1283,7 +1283,7 @@ export default function DashboardPage() {
                     type="email"
                     value={newMemberEmail}
                     onChange={(e) => setNewMemberEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     placeholder="john@example.com"
                     required
                   />
@@ -1302,7 +1302,7 @@ export default function DashboardPage() {
                     type="tel"
                     value={newMemberPhone}
                     onChange={(e) => setNewMemberPhone(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                     placeholder="+33 6 12 34 56 78"
                   />
                 </div>
