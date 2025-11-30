@@ -273,17 +273,17 @@ export default function CaregiverBreakdown({
             </div>
 
             <div className="overflow-x-auto -mx-4 md:mx-0">
-              <table className="min-w-[600px] md:w-full">
+              <table className="w-full md:min-w-[600px]">
                 <thead>
                   <tr className="border-b-2 border-gray-300">
-                    <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10 w-1 whitespace-nowrap">
+                    <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10 whitespace-nowrap">
                       {t('financial.caregiver')}
                     </th>
-                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
+                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm whitespace-nowrap">
                       {t('financial.regularHours')}
                       <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
                     </th>
-                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">{t('financial.regularAmount')}</th>
+                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm whitespace-nowrap">{t('financial.regularAmount')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -362,7 +362,7 @@ export default function CaregiverBreakdown({
               </div>
 
               <div className="overflow-x-auto -mx-4 md:mx-0">
-                <table className="min-w-[600px] md:w-full">
+                <table className="w-full md:min-w-[600px]">
                   <thead>
                     <tr className="border-b-2 border-gray-300">
                       <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10 w-1 whitespace-nowrap">
