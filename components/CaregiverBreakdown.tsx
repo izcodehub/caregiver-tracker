@@ -273,17 +273,17 @@ export default function CaregiverBreakdown({
             </div>
 
             <div className="overflow-x-auto -mx-4 md:mx-0">
-              <table className="w-full min-w-[600px]">
+              <table className="min-w-[600px] md:w-full">
                 <thead>
                   <tr className="border-b-2 border-gray-300">
                     <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10 w-1 whitespace-nowrap">
                       {t('financial.caregiver')}
                     </th>
-                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
+                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
                       {t('financial.regularHours')}
                       <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
                     </th>
-                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">{t('financial.regularAmount')}</th>
+                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">{t('financial.regularAmount')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -302,11 +302,11 @@ export default function CaregiverBreakdown({
                             {summary.name}
                           </span>
                         </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm">
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
                         <div>{formatNumber(summary.regularHours, 2, language)}h</div>
                         <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.regularHours)}</div>
                       </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm whitespace-nowrap">
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
                         {currency}{formatNumber(summary.regularAmount, 2, language)}
                       </td>
                     </tr>
@@ -317,20 +317,20 @@ export default function CaregiverBreakdown({
                     <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-blue-50 w-1 whitespace-nowrap">
                       {language === 'fr' ? 'Total Heures' : 'Total Hours'}
                     </td>
-                    <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm">
+                    <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
                       <div>{formatNumber(totals.regularHours, 2, language)}h</div>
                       <div className="text-[10px] md:text-xs text-gray-600">{decimalToHHMM(totals.regularHours)}</div>
                     </td>
-                    <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm whitespace-nowrap">
+                    <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
                       {currency}{formatNumber(totals.regularAmount, 2, language)}
                     </td>
                   </tr>
                   {/* TVA Row */}
                   <tr className="border-b border-gray-200 bg-gray-50">
-                    <td colSpan={2} className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-600 text-xs md:text-sm">
+                    <td colSpan={2} className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-600 text-xs md:text-sm whitespace-nowrap">
                       {language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}
                     </td>
-                    <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm whitespace-nowrap">
+                    <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
                       {currency}{formatNumber(totals.regularAmount * 0.055, 2, language)}
                     </td>
                   </tr>
@@ -338,10 +338,10 @@ export default function CaregiverBreakdown({
                 <tfoot>
                   {/* Grand Total Row */}
                   <tr className="border-t-2 border-gray-400 bg-green-50">
-                    <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base">
+                    <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base whitespace-nowrap">
                       {language === 'fr' ? 'TOTAL GÉNÉRAL' : 'GRAND TOTAL'}
                     </td>
-                    <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl whitespace-nowrap">
+                    <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl w-1 whitespace-nowrap">
                       {currency}{formatNumber(totals.regularAmount * 1.055, 2, language)}
                     </td>
                   </tr>
@@ -362,17 +362,17 @@ export default function CaregiverBreakdown({
               </div>
 
               <div className="overflow-x-auto -mx-4 md:mx-0">
-                <table className="w-full min-w-[600px]">
+                <table className="min-w-[600px] md:w-full">
                   <thead>
                     <tr className="border-b-2 border-gray-300">
                       <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10 w-1 whitespace-nowrap">
                         {t('financial.caregiver')}
                       </th>
-                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
+                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
                         {t('financial.holidayHours')}
                         <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
                       </th>
-                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">{t('financial.holidayAmount')}</th>
+                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">{t('financial.holidayAmount')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -391,11 +391,11 @@ export default function CaregiverBreakdown({
                               {summary.name}
                             </span>
                           </td>
-                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm">
+                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
                           <div>{formatNumber(summary.holidayHours, 2, language)}h</div>
                           <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.holidayHours)}</div>
                         </td>
-                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm whitespace-nowrap">
+                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
                           {currency}{formatNumber(summary.holidayAmount, 2, language)}
                         </td>
                       </tr>
@@ -406,20 +406,20 @@ export default function CaregiverBreakdown({
                       <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-blue-50 w-1 whitespace-nowrap">
                         {language === 'fr' ? 'Total Heures' : 'Total Hours'}
                       </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm">
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
                         <div>{formatNumber(totals.holidayHours, 2, language)}h</div>
                         <div className="text-[10px] md:text-xs text-gray-600">{decimalToHHMM(totals.holidayHours)}</div>
                       </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm whitespace-nowrap">
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
                         {currency}{formatNumber(totals.holidayAmount, 2, language)}
                       </td>
                     </tr>
                     {/* TVA Row */}
                     <tr className="border-b border-gray-200 bg-gray-50">
-                      <td colSpan={2} className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-600 text-xs md:text-sm">
+                      <td colSpan={2} className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-600 text-xs md:text-sm whitespace-nowrap">
                         {language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}
                       </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm whitespace-nowrap">
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
                         {currency}{formatNumber(totals.holidayAmount * 0.055, 2, language)}
                       </td>
                     </tr>
@@ -427,10 +427,10 @@ export default function CaregiverBreakdown({
                   <tfoot>
                     {/* Grand Total Row */}
                     <tr className="border-t-2 border-gray-400 bg-green-50">
-                      <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base">
+                      <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base whitespace-nowrap">
                         {language === 'fr' ? 'TOTAL GÉNÉRAL' : 'GRAND TOTAL'}
                       </td>
-                      <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl whitespace-nowrap">
+                      <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl w-1 whitespace-nowrap">
                         {currency}{formatNumber(totals.holidayAmount * 1.055, 2, language)}
                       </td>
                     </tr>
