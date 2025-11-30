@@ -28,11 +28,13 @@ import {
   Home,
   UserPlus,
   X,
+  CircleAlert,
 } from 'lucide-react';
 import QRCodeGenerator from '@/components/QRCodeGenerator';
 import CalendarView from '@/components/CalendarView';
 import CaregiverBreakdown from '@/components/CaregiverBreakdown';
 import LanguageToggle from '@/components/LanguageToggle';
+import { createColorMap, type CaregiverColor } from '@/lib/caregiver-colors';
 
 type CheckInOut = {
   id: string;
@@ -121,6 +123,7 @@ export default function DashboardPage() {
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberPhone, setNewMemberPhone] = useState('');
   const [addingMember, setAddingMember] = useState(false);
+  const [caregiverColors, setCaregiverColors] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     loadData();
@@ -189,6 +192,16 @@ export default function DashboardPage() {
 
         setCheckIns(checkInsData || []);
 
+        // Load caregiver colors
+        const { data: caregiversData } = await supabase
+          .from('caregivers')
+          .select('id, name, color');
+
+        if (caregiversData) {
+          const colorMap = createColorMap(caregiversData as CaregiverColor[]);
+          setCaregiverColors(colorMap);
+        }
+
         // Get current status
         const { data: statusData } = await supabase
           .rpc('get_current_status', { elderly_uuid: elderlyData.id });
@@ -221,19 +234,73 @@ export default function DashboardPage() {
     exportDetailedCheckInsToCSV(checkIns, elderly.name, selectedMonth);
   };
 
-  const calculateDayHours = (dayCheckIns: CheckInOut[]) => {
+  const calculateDayHours = (dayCheckIns: CheckInOut[], includeTraining: boolean = true) => {
     let totalHours = 0;
     const sorted = [...dayCheckIns].sort((a, b) =>
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
-    for (let i = 0; i < sorted.length - 1; i++) {
-      if (sorted[i].action === 'check-in' && sorted[i + 1].action === 'check-out') {
-        const start = new Date(sorted[i].timestamp).getTime();
-        const end = new Date(sorted[i + 1].timestamp).getTime();
-        totalHours += (end - start) / (1000 * 60 * 60);
+    const processed = new Set<string>();
+
+    sorted.forEach((ci) => {
+      if (processed.has(ci.id)) return;
+
+      if (ci.action === 'check-in') {
+        // Skip or include training based on parameter
+        if (!includeTraining && ci.is_training) return;
+        if (includeTraining && !includeTraining && ci.is_training) return;
+
+        // Find matching check-out (next check-out from same caregiver)
+        const checkOut = sorted.find(
+          (co) =>
+            !processed.has(co.id) &&
+            co.action === 'check-out' &&
+            co.caregiver_name === ci.caregiver_name &&
+            new Date(co.timestamp).getTime() > new Date(ci.timestamp).getTime()
+        );
+
+        if (checkOut) {
+          const start = new Date(ci.timestamp).getTime();
+          const end = new Date(checkOut.timestamp).getTime();
+          totalHours += (end - start) / (1000 * 60 * 60);
+          processed.add(ci.id);
+          processed.add(checkOut.id);
+        }
       }
-    }
+    });
+
+    return totalHours;
+  };
+
+  const calculateTrainingHours = (dayCheckIns: CheckInOut[]) => {
+    let totalHours = 0;
+    const sorted = [...dayCheckIns].sort((a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    const processed = new Set<string>();
+
+    sorted.forEach((ci) => {
+      if (processed.has(ci.id)) return;
+
+      if (ci.action === 'check-in' && ci.is_training) {
+        const checkOut = sorted.find(
+          (co) =>
+            !processed.has(co.id) &&
+            co.action === 'check-out' &&
+            co.caregiver_name === ci.caregiver_name &&
+            new Date(co.timestamp).getTime() > new Date(ci.timestamp).getTime()
+        );
+
+        if (checkOut) {
+          const start = new Date(ci.timestamp).getTime();
+          const end = new Date(checkOut.timestamp).getTime();
+          totalHours += (end - start) / (1000 * 60 * 60);
+          processed.add(ci.id);
+          processed.add(checkOut.id);
+        }
+      }
+    });
 
     return totalHours;
   };
@@ -456,14 +523,67 @@ export default function DashboardPage() {
         )}
 
         {/* Month Selector */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <h2 className="text-2xl font-semibold text-gray-800">{t('dashboard.monthlyView')}</h2>
-          <input
-            type="month"
-            value={format(selectedMonth, 'yyyy-MM')}
-            onChange={(e) => setSelectedMonth(new Date(e.target.value + '-01'))}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-          />
+          <div className="flex items-center gap-2">
+            {/* Month Dropdown */}
+            <select
+              value={selectedMonth.getMonth()}
+              onChange={(e) => {
+                const newDate = new Date(selectedMonth);
+                newDate.setMonth(parseInt(e.target.value));
+                setSelectedMonth(newDate);
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+            >
+              {language === 'fr' ? (
+                <>
+                  <option value="0">Janvier</option>
+                  <option value="1">Février</option>
+                  <option value="2">Mars</option>
+                  <option value="3">Avril</option>
+                  <option value="4">Mai</option>
+                  <option value="5">Juin</option>
+                  <option value="6">Juillet</option>
+                  <option value="7">Août</option>
+                  <option value="8">Septembre</option>
+                  <option value="9">Octobre</option>
+                  <option value="10">Novembre</option>
+                  <option value="11">Décembre</option>
+                </>
+              ) : (
+                <>
+                  <option value="0">January</option>
+                  <option value="1">February</option>
+                  <option value="2">March</option>
+                  <option value="3">April</option>
+                  <option value="4">May</option>
+                  <option value="5">June</option>
+                  <option value="6">July</option>
+                  <option value="7">August</option>
+                  <option value="8">September</option>
+                  <option value="9">October</option>
+                  <option value="10">November</option>
+                  <option value="11">December</option>
+                </>
+              )}
+            </select>
+
+            {/* Year Dropdown */}
+            <select
+              value={selectedMonth.getFullYear()}
+              onChange={(e) => {
+                const newDate = new Date(selectedMonth);
+                newDate.setFullYear(parseInt(e.target.value));
+                setSelectedMonth(newDate);
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
+            >
+              {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -525,6 +645,7 @@ export default function DashboardPage() {
             <CalendarView
               selectedMonth={selectedMonth}
               checkIns={checkIns}
+              caregiverColors={caregiverColors}
               onDayClick={(date, dayCheckIns) => {
                 setSelectedDayView({ date, checkIns: dayCheckIns });
               }}
@@ -551,13 +672,21 @@ export default function DashboardPage() {
               <h2 className="text-3xl font-bold text-gray-800">
                 {format(selectedDayView.date, 'EEEE, MMMM d, yyyy')}
               </h2>
-              <div className="mt-4 flex items-center gap-6">
+              <div className="mt-4 flex flex-wrap items-center gap-6">
                 <div className="flex items-center gap-2">
                   <Clock className="text-blue-600" size={20} />
                   <span className="text-gray-700">
-                    {t('dashboard.totalHours')}: <span className="font-semibold">{calculateDayHours(selectedDayView.checkIns).toFixed(2)}h ({decimalToHHMM(calculateDayHours(selectedDayView.checkIns))})</span>
+                    {t('dashboard.totalHours')}: <span className="font-semibold">{calculateDayHours(selectedDayView.checkIns, false).toFixed(2)}h ({decimalToHHMM(calculateDayHours(selectedDayView.checkIns, false))})</span>
                   </span>
                 </div>
+                {calculateTrainingHours(selectedDayView.checkIns) > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="text-amber-600" size={20} />
+                    <span className="text-gray-700">
+                      {language === 'fr' ? 'Formation' : 'Training'}: <span className="font-semibold text-amber-600">{calculateTrainingHours(selectedDayView.checkIns).toFixed(2)}h ({decimalToHHMM(calculateTrainingHours(selectedDayView.checkIns))})</span>
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <User className="text-blue-600" size={20} />
                   <span className="text-gray-700">
@@ -712,6 +841,7 @@ export default function DashboardPage() {
               holidayRate={elderly.holiday_rate || 22.5}
               currency={elderly.currency || 'EUR'}
               copayPercentage={elderly.ticket_moderateur || 0}
+              caregiverColors={caregiverColors}
             />
           </div>
         )}
@@ -871,20 +1001,36 @@ export default function DashboardPage() {
             <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
                 <h2 className="text-xl font-semibold text-gray-800">{t('dashboard.checkInHistory')}</h2>
-                <div className="flex items-center gap-2">
-                  <Clock className="text-blue-600" size={20} />
-                  <span className="text-sm md:text-base text-gray-700">
-                    {t('dashboard.totalHours')}: <span className="font-semibold">{(() => {
-                      const monthCheckIns = checkIns.filter(ci =>
-                        format(new Date(ci.timestamp), 'yyyy-MM') === format(selectedMonth, 'yyyy-MM')
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="text-blue-600" size={20} />
+                    <span className="text-sm md:text-base text-gray-700">
+                      {t('dashboard.totalHours')}: <span className="font-semibold">{(() => {
+                        let total = 0;
+                        Object.values(groupedCheckIns).forEach(dayCheckIns => {
+                          total += calculateDayHours(dayCheckIns, false);
+                        });
+                        return `${total.toFixed(2)}h (${decimalToHHMM(total)})`;
+                      })()}</span>
+                    </span>
+                  </div>
+                  {(() => {
+                    let trainingTotal = 0;
+                    Object.values(groupedCheckIns).forEach(dayCheckIns => {
+                      trainingTotal += calculateTrainingHours(dayCheckIns);
+                    });
+                    if (trainingTotal > 0) {
+                      return (
+                        <div className="flex items-center gap-2">
+                          <Clock className="text-amber-600" size={20} />
+                          <span className="text-sm md:text-base text-gray-700">
+                            {language === 'fr' ? 'Formation' : 'Training'}: <span className="font-semibold text-amber-600">{trainingTotal.toFixed(2)}h ({decimalToHHMM(trainingTotal)})</span>
+                          </span>
+                        </div>
                       );
-                      let total = 0;
-                      Object.values(groupedCheckIns).forEach(dayCheckIns => {
-                        total += calculateDayHours(dayCheckIns);
-                      });
-                      return `${total.toFixed(2)}h (${decimalToHHMM(total)})`;
-                    })()}</span>
-                  </span>
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
 
@@ -896,8 +1042,9 @@ export default function DashboardPage() {
               ) : (
                 <div className="space-y-4">
                   {Object.entries(groupedCheckIns).map(([date, dayCheckIns]) => {
-                    const hours = calculateDayHours(dayCheckIns).toFixed(2);
-                    const hasIssue = hasDiscrepancy(dayCheckIns);
+                    const chargedHours = calculateDayHours(dayCheckIns, false);
+                    const trainingHours = calculateTrainingHours(dayCheckIns);
+                    const hasTraining = dayCheckIns.some(ci => ci.is_training);
 
                     return (
                       <div key={date} className="border border-gray-200 rounded-lg p-4">
@@ -907,11 +1054,23 @@ export default function DashboardPage() {
                             <span className="font-semibold text-gray-800">
                               {format(new Date(date), 'EEEE, MMMM d, yyyy')}
                             </span>
-                            {hasIssue && (
-                              <AlertCircle className="text-orange-500" size={18} />
+                            {hasTraining && (
+                              <div className="relative group">
+                                <CircleAlert className="text-orange-500" size={18} />
+                                <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
+                                  {language === 'fr' ? 'Formation ce jour' : 'Training this day'}
+                                </div>
+                              </div>
                             )}
                           </div>
-                          <span className="text-sm text-gray-600">{hours} hours</span>
+                          <div className="flex items-center gap-3 text-sm text-gray-600">
+                            <span>{chargedHours.toFixed(2)}h ({decimalToHHMM(chargedHours)})</span>
+                            {trainingHours > 0 && (
+                              <span className="text-amber-600">
+                                +{trainingHours.toFixed(2)}h ({decimalToHHMM(trainingHours)}) {language === 'fr' ? 'Formation' : 'Training'}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div className="space-y-2">

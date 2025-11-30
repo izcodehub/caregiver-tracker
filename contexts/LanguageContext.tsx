@@ -168,6 +168,9 @@ const translations = {
       verificationNote: '* Ce résumé est à des fins de vérification. Comparez avec la facture de l\'agence ligne par ligne.',
       holidayDetectionNote: '* Détection des jours fériés : Dimanches + Heures du soir (après 20h). Jours fériés français à venir.',
       noCaregiverData: 'Aucune donnée d\'aide-soignant pour ce mois',
+      trainingSessions: 'Sessions de Formation (Binôme ADV)',
+      trainingNote: '* Formation non facturée - 0€/h',
+      noTrainingSessions: 'Aucune session de formation ce mois',
     },
     checkIn: {
       checkIn: 'Arrivée',

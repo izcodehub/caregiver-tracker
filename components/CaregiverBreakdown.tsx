@@ -2,9 +2,10 @@
 
 import { format } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
-import { User, Clock, Euro } from 'lucide-react';
+import { User, Clock, Euro, CheckCircle, XCircle } from 'lucide-react';
 import { decimalToHHMM, formatNumber } from '@/lib/time-utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getColor, hexToRgba } from '@/lib/caregiver-colors';
 
 type CheckInOut = {
   id: string;
@@ -28,6 +29,19 @@ type CaregiverSummary = {
   totalAmount: number;
 };
 
+type TrainingSession = {
+  date: Date;
+  checkIn: Date;
+  checkOut: Date;
+  hours: number;
+};
+
+type TrainingSummary = {
+  name: string;
+  sessions: TrainingSession[];
+  totalHours: number;
+};
+
 type CaregiverBreakdownProps = {
   checkIns: CheckInOut[];
   selectedMonth: Date;
@@ -35,6 +49,7 @@ type CaregiverBreakdownProps = {
   holidayRate: number;
   currency: string;
   copayPercentage: number;
+  caregiverColors: Map<string, string>;
 };
 
 export default function CaregiverBreakdown({
@@ -44,9 +59,13 @@ export default function CaregiverBreakdown({
   holidayRate,
   currency,
   copayPercentage,
+  caregiverColors,
 }: CaregiverBreakdownProps) {
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
+
+  // Get all unique caregiver names for color fallback
+  const allCaregiverNames = Array.from(new Set(checkIns.map(ci => ci.caregiver_name)));
 
   const calculateHoursPerCaregiver = (): CaregiverSummary[] => {
     const caregiverMap = new Map<string, { regularHours: number; holidayHours: number }>();
@@ -137,7 +156,54 @@ export default function CaregiverBreakdown({
     return summaries.sort((a, b) => a.name.localeCompare(b.name));
   };
 
+  const calculateTrainingSessions = (): TrainingSummary[] => {
+    const trainingMap = new Map<string, TrainingSession[]>();
+
+    // Group check-ins by caregiver
+    const sorted = [...checkIns].sort((a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    // Find training session pairs
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if (sorted[i].action === 'check-in' &&
+          sorted[i + 1].action === 'check-out' &&
+          sorted[i].is_training) {
+
+        const caregiverName = sorted[i].caregiver_name;
+        const checkIn = new Date(sorted[i].timestamp);
+        const checkOut = new Date(sorted[i + 1].timestamp);
+        const hours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+
+        if (!trainingMap.has(caregiverName)) {
+          trainingMap.set(caregiverName, []);
+        }
+
+        trainingMap.get(caregiverName)!.push({
+          date: checkIn,
+          checkIn,
+          checkOut,
+          hours,
+        });
+      }
+    }
+
+    // Convert to array
+    const trainingSummaries: TrainingSummary[] = [];
+    trainingMap.forEach((sessions, name) => {
+      const totalHours = sessions.reduce((sum, session) => sum + session.hours, 0);
+      trainingSummaries.push({
+        name,
+        sessions,
+        totalHours,
+      });
+    });
+
+    return trainingSummaries.sort((a, b) => a.name.localeCompare(b.name));
+  };
+
   const summaries = calculateHoursPerCaregiver();
+  const trainingSummaries = calculateTrainingSessions();
   const totals = summaries.reduce(
     (acc, summary) => ({
       regularHours: acc.regularHours + summary.regularHours,
@@ -163,95 +229,292 @@ export default function CaregiverBreakdown({
         </div>
       ) : (
         <>
-          {/* Mobile hint for scrolling */}
-          <div className="md:hidden text-xs text-gray-500 mb-2 text-center">
-            ← Swipe to see all columns →
-          </div>
+          {/* Regular Hours Table */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">
+              {language === 'fr' ? 'Montant Normal HT' : 'Regular Amount (Before Tax)'} - {currency}{formatNumber(regularRate, 2, language)}/h
+            </h3>
 
-          <div className="overflow-x-auto -mx-4 md:mx-0">
-            <table className="w-full min-w-[800px]">
-              <thead>
-                <tr className="border-b-2 border-gray-300">
-                  <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10">
-                    {t('financial.caregiver')}
-                  </th>
-                  <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
-                    {t('financial.regularHours')}
-                    <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
-                  </th>
-                  <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
-                    {t('financial.holidayHours')}
-                    <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
-                  </th>
-                  <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
-                    {t('financial.totalHours')}
-                    <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
-                  </th>
-                  <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">{t('financial.regularAmount')}</th>
-                  <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">{t('financial.holidayAmount')}</th>
-                  <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">{t('financial.totalAmount')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summaries.map((summary, idx) => (
-                  <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="py-2 md:py-3 px-1 md:px-2 font-medium text-gray-800 text-xs md:text-sm sticky left-0 bg-white">
-                      {summary.name}
-                    </td>
-                    <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm">
-                      <div>{formatNumber(summary.regularHours, 2, language)}h</div>
-                      <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.regularHours)}</div>
-                    </td>
-                    <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm">
-                      <div>{formatNumber(summary.holidayHours, 2, language)}h</div>
-                      <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.holidayHours)}</div>
+            <div className="md:hidden text-xs text-gray-500 mb-2 text-center">
+              ← Swipe to see all columns →
+            </div>
+
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+              <table className="w-full min-w-[600px]">
+                <thead>
+                  <tr className="border-b-2 border-gray-300">
+                    <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10">
+                      {t('financial.caregiver')}
+                    </th>
+                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
+                      {t('financial.regularHours')}
+                      <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
+                    </th>
+                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">{t('financial.regularAmount')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summaries.filter(s => s.regularHours > 0).map((summary, idx) => {
+                    const color = getColor(summary.name, caregiverColors, allCaregiverNames);
+                    return (
+                      <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="py-2 md:py-3 px-1 md:px-2 font-medium text-xs md:text-sm sticky left-0 bg-white">
+                          <span
+                            className="px-2 py-1 rounded font-semibold"
+                            style={{
+                              color: color,
+                              backgroundColor: hexToRgba(color, 0.15)
+                            }}
+                          >
+                            {summary.name}
+                          </span>
+                        </td>
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm">
+                        <div>{formatNumber(summary.regularHours, 2, language)}h</div>
+                        <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.regularHours)}</div>
+                      </td>
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm whitespace-nowrap">
+                        {currency}{formatNumber(summary.regularAmount, 2, language)}
+                      </td>
+                    </tr>
+                  );
+                  })}
+                  {/* Total Hours Row */}
+                  <tr className="border-t border-gray-300 bg-blue-50">
+                    <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-blue-50">
+                      {language === 'fr' ? 'Total Heures' : 'Total Hours'}
                     </td>
                     <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm">
-                      <div>{formatNumber(summary.totalHours, 2, language)}h</div>
-                      <div className="text-[10px] md:text-xs text-gray-600">{decimalToHHMM(summary.totalHours)}</div>
-                    </td>
-                    <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm whitespace-nowrap">
-                      {currency}{formatNumber(summary.regularAmount, 2, language)}
-                    </td>
-                    <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm whitespace-nowrap">
-                      {currency}{formatNumber(summary.holidayAmount, 2, language)}
+                      <div>{formatNumber(totals.regularHours, 2, language)}h</div>
+                      <div className="text-[10px] md:text-xs text-gray-600">{decimalToHHMM(totals.regularHours)}</div>
                     </td>
                     <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm whitespace-nowrap">
-                      {currency}{formatNumber(summary.totalAmount, 2, language)}
+                      {currency}{formatNumber(totals.regularAmount, 2, language)}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-gray-300 bg-gray-50">
-                  <td className="py-2 md:py-3 px-1 md:px-2 font-bold text-gray-900 text-xs md:text-sm sticky left-0 bg-gray-50">
-                    {t('financial.total')}
-                  </td>
-                  <td className="py-2 md:py-3 px-1 md:px-2 text-right font-bold text-gray-900 text-xs md:text-sm">
-                    <div>{formatNumber(totals.regularHours, 2, language)}h</div>
-                    <div className="text-[10px] md:text-xs font-semibold text-gray-600">{decimalToHHMM(totals.regularHours)}</div>
-                  </td>
-                  <td className="py-2 md:py-3 px-1 md:px-2 text-right font-bold text-gray-900 text-xs md:text-sm">
-                    <div>{formatNumber(totals.holidayHours, 2, language)}h</div>
-                    <div className="text-[10px] md:text-xs font-semibold text-gray-600">{decimalToHHMM(totals.holidayHours)}</div>
-                  </td>
-                  <td className="py-2 md:py-3 px-1 md:px-2 text-right font-bold text-gray-900 text-xs md:text-sm">
-                    <div>{formatNumber(totals.totalHours, 2, language)}h</div>
-                    <div className="text-[10px] md:text-xs font-semibold text-gray-600">{decimalToHHMM(totals.totalHours)}</div>
-                  </td>
-                  <td className="py-2 md:py-3 px-1 md:px-2 text-right font-bold text-gray-900 text-xs md:text-sm whitespace-nowrap">
-                    {currency}{formatNumber(totals.regularAmount, 2, language)}
-                  </td>
-                  <td className="py-2 md:py-3 px-1 md:px-2 text-right font-bold text-gray-900 text-xs md:text-sm whitespace-nowrap">
-                    {currency}{formatNumber(totals.holidayAmount, 2, language)}
-                  </td>
-                  <td className="py-2 md:py-3 px-1 md:px-2 text-right font-bold text-blue-600 text-sm md:text-lg whitespace-nowrap">
-                    {currency}{formatNumber(totals.totalAmount, 2, language)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+                  {/* TVA Row */}
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <td colSpan={2} className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-600 text-xs md:text-sm">
+                      {language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}
+                    </td>
+                    <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm whitespace-nowrap">
+                      {currency}{formatNumber(totals.regularAmount * 0.055, 2, language)}
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  {/* Grand Total Row */}
+                  <tr className="border-t-2 border-gray-400 bg-green-50">
+                    <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base">
+                      {language === 'fr' ? 'TOTAL GÉNÉRAL' : 'GRAND TOTAL'}
+                    </td>
+                    <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl whitespace-nowrap">
+                      {currency}{formatNumber(totals.regularAmount * 1.055, 2, language)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
+
+          {/* Holiday Hours Table - Only show if there are holiday hours */}
+          {totals.holidayHours > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                {language === 'fr' ? 'Montant Majoré HT' : 'Holiday Amount (Before Tax)'} - {currency}{formatNumber(holidayRate, 2, language)}/h
+              </h3>
+
+              <div className="md:hidden text-xs text-gray-500 mb-2 text-center">
+                ← Swipe to see all columns →
+              </div>
+
+              <div className="overflow-x-auto -mx-4 md:mx-0">
+                <table className="w-full min-w-[600px]">
+                  <thead>
+                    <tr className="border-b-2 border-gray-300">
+                      <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10">
+                        {t('financial.caregiver')}
+                      </th>
+                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
+                        {t('financial.holidayHours')}
+                        <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
+                      </th>
+                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">{t('financial.holidayAmount')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summaries.filter(s => s.holidayHours > 0).map((summary, idx) => {
+                      const color = getColor(summary.name, caregiverColors, allCaregiverNames);
+                      return (
+                        <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
+                          <td className="py-2 md:py-3 px-1 md:px-2 font-medium text-xs md:text-sm sticky left-0 bg-white">
+                            <span
+                              className="px-2 py-1 rounded font-semibold"
+                              style={{
+                                color: color,
+                                backgroundColor: hexToRgba(color, 0.15)
+                              }}
+                            >
+                              {summary.name}
+                            </span>
+                          </td>
+                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm">
+                          <div>{formatNumber(summary.holidayHours, 2, language)}h</div>
+                          <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.holidayHours)}</div>
+                        </td>
+                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm whitespace-nowrap">
+                          {currency}{formatNumber(summary.holidayAmount, 2, language)}
+                        </td>
+                      </tr>
+                    );
+                    })}
+                    {/* Total Hours Row */}
+                    <tr className="border-t border-gray-300 bg-blue-50">
+                      <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-blue-50">
+                        {language === 'fr' ? 'Total Heures' : 'Total Hours'}
+                      </td>
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm">
+                        <div>{formatNumber(totals.holidayHours, 2, language)}h</div>
+                        <div className="text-[10px] md:text-xs text-gray-600">{decimalToHHMM(totals.holidayHours)}</div>
+                      </td>
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm whitespace-nowrap">
+                        {currency}{formatNumber(totals.holidayAmount, 2, language)}
+                      </td>
+                    </tr>
+                    {/* TVA Row */}
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <td colSpan={2} className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-600 text-xs md:text-sm">
+                        {language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}
+                      </td>
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm whitespace-nowrap">
+                        {currency}{formatNumber(totals.holidayAmount * 0.055, 2, language)}
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    {/* Grand Total Row */}
+                    <tr className="border-t-2 border-gray-400 bg-green-50">
+                      <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base">
+                        {language === 'fr' ? 'TOTAL GÉNÉRAL' : 'GRAND TOTAL'}
+                      </td>
+                      <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl whitespace-nowrap">
+                        {currency}{formatNumber(totals.holidayAmount * 1.055, 2, language)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Training Sessions (Binôme ADV) */}
+          {trainingSummaries.length > 0 && (
+            <div className="mt-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2 text-lg">
+                <Clock size={20} className="text-amber-600" />
+                {language === 'fr' ? 'Formation - Gratuite' : 'Training - Free'}
+              </h3>
+
+              <div className="space-y-4">
+                {trainingSummaries.map((trainer, idx) => {
+                  const color = getColor(trainer.name, caregiverColors, allCaregiverNames);
+                  return (
+                    <div key={idx}>
+                      {/* Caregiver Header with Total */}
+                      <div className="flex items-center justify-between mb-3 px-4 py-2 rounded-lg border-l-4"
+                           style={{
+                             backgroundColor: hexToRgba(color, 0.1),
+                             borderColor: color
+                           }}>
+                        <h4 className="font-semibold" style={{ color: color }}>{trainer.name}</h4>
+                        <span className="text-sm text-gray-600">
+                          {formatNumber(trainer.totalHours, 2, language)}h ({decimalToHHMM(trainer.totalHours)})
+                        </span>
+                      </div>
+
+                    {/* Sessions by Date */}
+                    <div className="space-y-2">
+                      {trainer.sessions.map((session, sessionIdx) => (
+                        <div key={sessionIdx} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                          {/* Mobile: Stacked layout */}
+                          <div className="lg:hidden space-y-2">
+                            <div className="flex items-center justify-between p-2 rounded bg-green-50">
+                              <div className="flex items-center gap-2 flex-1">
+                                <CheckCircle className="text-green-600" size={16} />
+                                <div className="flex-1">
+                                  <p className="font-medium text-gray-800 text-sm">
+                                    {format(session.date, 'EEEE, MMMM d, yyyy', { locale })}
+                                  </p>
+                                  <div className="flex items-center gap-1 text-xs text-gray-600">
+                                    <Clock size={12} />
+                                    <span>{format(session.checkIn, 'HH:mm:ss')}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-200 text-green-800">
+                                In
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between p-2 rounded bg-red-50">
+                              <div className="flex items-center gap-2 flex-1">
+                                <XCircle className="text-red-600" size={16} />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-1 text-xs text-gray-600">
+                                    <Clock size={12} />
+                                    <span>{format(session.checkOut, 'HH:mm:ss')}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-200 text-red-800">
+                                Out
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Desktop: Check-in left, Check-out right */}
+                          <div className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] gap-4 items-center">
+                            {/* Left: Check-in */}
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border-l-4 border-green-500">
+                              <CheckCircle className="text-green-600" size={20} />
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-800">
+                                  {format(session.date, 'EEEE, MMMM d, yyyy', { locale })}
+                                </p>
+                                <div className="flex items-center gap-1 text-sm text-gray-600">
+                                  <Clock size={14} />
+                                  <span>{format(session.checkIn, 'HH:mm:ss')}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Center: Duration */}
+                            <div className="text-center px-4">
+                              <div className="text-base font-bold text-blue-600">
+                                {formatNumber(session.hours, 2, language)}h
+                              </div>
+                            </div>
+
+                            {/* Right: Check-out */}
+                            <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 border-l-4 border-red-500">
+                              <XCircle className="text-red-600" size={20} />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-1 text-sm text-gray-600">
+                                  <Clock size={14} />
+                                  <span>{format(session.checkOut, 'HH:mm:ss')}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Reste à charge (Patient's share) */}
           {copayPercentage > 0 && (

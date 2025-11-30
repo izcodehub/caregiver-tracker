@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { getHolidayType } from '@/lib/holidays';
 import { PartyPopper } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getColor, hexToRgba } from '@/lib/caregiver-colors';
 
 type CheckInOut = {
   id: string;
@@ -21,6 +22,7 @@ type CheckInOut = {
 type CalendarViewProps = {
   selectedMonth: Date;
   checkIns: CheckInOut[];
+  caregiverColors: Map<string, string>;
   onDayClick: (date: Date, dayCheckIns: CheckInOut[]) => void;
 };
 
@@ -51,8 +53,11 @@ function RunningTimer({ checkInTime }: { checkInTime: Date }) {
   );
 }
 
-export default function CalendarView({ selectedMonth, checkIns, onDayClick }: CalendarViewProps) {
+export default function CalendarView({ selectedMonth, checkIns, caregiverColors, onDayClick }: CalendarViewProps) {
   const { language } = useLanguage();
+
+  // Get all unique caregiver names for color fallback
+  const allCaregiverNames = Array.from(new Set(checkIns.map(ci => ci.caregiver_name)));
 
   // French calendar starts on Monday (weekStartsOn: 1), English starts on Sunday (weekStartsOn: 0)
   const weekStartsOn = language === 'fr' ? 1 : 0;
@@ -141,27 +146,115 @@ export default function CalendarView({ selectedMonth, checkIns, onDayClick }: Ca
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
-    for (let i = 0; i < sorted.length; i++) {
-      if (sorted[i].action === 'check-in' && sorted[i + 1]?.action === 'check-out') {
-        const checkIn = new Date(sorted[i].timestamp).getTime();
-        const checkOut = new Date(sorted[i + 1].timestamp).getTime();
-        totalHours += (checkOut - checkIn) / (1000 * 60 * 60);
+    const processed = new Set<string>();
+
+    sorted.forEach((ci) => {
+      if (processed.has(ci.id)) return;
+
+      if (ci.action === 'check-in') {
+        // Find matching check-out (next check-out from same caregiver)
+        const checkOut = sorted.find(
+          (co) =>
+            !processed.has(co.id) &&
+            co.action === 'check-out' &&
+            co.caregiver_name === ci.caregiver_name &&
+            new Date(co.timestamp).getTime() > new Date(ci.timestamp).getTime()
+        );
+
+        if (checkOut) {
+          const checkIn = new Date(ci.timestamp).getTime();
+          const checkOutTime = new Date(checkOut.timestamp).getTime();
+          totalHours += (checkOutTime - checkIn) / (1000 * 60 * 60);
+          processed.add(ci.id);
+          processed.add(checkOut.id);
+        }
       }
-    }
+    });
+
     return totalHours;
   };
 
-  const calculateMonthTotalHours = (): number => {
-    const monthCheckIns = checkIns.filter(ci =>
-      isSameMonth(new Date(ci.timestamp), selectedMonth)
+  const calculateTrainingHours = (dayCheckIns: CheckInOut[]): number => {
+    let totalHours = 0;
+    const sorted = [...dayCheckIns].sort((a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
+    const processed = new Set<string>();
+
+    sorted.forEach((ci) => {
+      if (processed.has(ci.id)) return;
+
+      if (ci.action === 'check-in' && ci.is_training) {
+        const checkOut = sorted.find(
+          (co) =>
+            !processed.has(co.id) &&
+            co.action === 'check-out' &&
+            co.caregiver_name === ci.caregiver_name &&
+            new Date(co.timestamp).getTime() > new Date(ci.timestamp).getTime()
+        );
+
+        if (checkOut) {
+          const checkIn = new Date(ci.timestamp).getTime();
+          const checkOutTime = new Date(checkOut.timestamp).getTime();
+          totalHours += (checkOutTime - checkIn) / (1000 * 60 * 60);
+          processed.add(ci.id);
+          processed.add(checkOut.id);
+        }
+      }
+    });
+
+    return totalHours;
+  };
+
+  const calculateMonthTotalHours = (includeTraining: boolean = true): number => {
     let totalHours = 0;
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
     days.forEach(day => {
       const dayCheckIns = getDayCheckIns(day);
-      totalHours += calculateDayHours(dayCheckIns);
+      const sorted = [...dayCheckIns].sort((a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      const processed = new Set<string>();
+
+      sorted.forEach((ci) => {
+        if (processed.has(ci.id)) return;
+
+        if (ci.action === 'check-in') {
+          // Skip or include training based on parameter
+          if (!includeTraining && ci.is_training) return;
+
+          const checkOut = sorted.find(
+            (co) =>
+              !processed.has(co.id) &&
+              co.action === 'check-out' &&
+              co.caregiver_name === ci.caregiver_name &&
+              new Date(co.timestamp).getTime() > new Date(ci.timestamp).getTime()
+          );
+
+          if (checkOut) {
+            const checkIn = new Date(ci.timestamp).getTime();
+            const checkOutTime = new Date(checkOut.timestamp).getTime();
+            totalHours += (checkOutTime - checkIn) / (1000 * 60 * 60);
+            processed.add(ci.id);
+            processed.add(checkOut.id);
+          }
+        }
+      });
+    });
+
+    return totalHours;
+  };
+
+  const calculateMonthTrainingHours = (): number => {
+    let totalHours = 0;
+    const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+    days.forEach(day => {
+      const dayCheckIns = getDayCheckIns(day);
+      totalHours += calculateTrainingHours(dayCheckIns);
     });
 
     return totalHours;
@@ -173,19 +266,30 @@ export default function CalendarView({ selectedMonth, checkIns, onDayClick }: Ca
     return `${h}h${m.toString().padStart(2, '0')}`;
   };
 
-  const monthTotalHours = calculateMonthTotalHours();
+  const monthChargedHours = calculateMonthTotalHours(false);
+  const monthTrainingHours = calculateMonthTrainingHours();
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
         <h2 className="text-xl font-semibold text-gray-800">
           {format(selectedMonth, 'MMMM yyyy')}
         </h2>
-        <div className="text-right">
-          <div className="text-sm text-gray-600">Total du mois</div>
-          <div className="text-lg font-bold text-blue-600">
-            {formatHours(monthTotalHours)} ({monthTotalHours.toFixed(2)}h)
+        <div className="flex flex-wrap items-center gap-4 text-sm sm:text-base">
+          <div className="text-right">
+            <div className="text-xs sm:text-sm text-gray-600">{language === 'fr' ? 'Heures facturées' : 'Charged Hours'}</div>
+            <div className="text-base sm:text-lg font-bold text-blue-600">
+              {formatHours(monthChargedHours)} ({monthChargedHours.toFixed(2)}h)
+            </div>
           </div>
+          {monthTrainingHours > 0 && (
+            <div className="text-right">
+              <div className="text-xs sm:text-sm text-gray-600">{language === 'fr' ? 'Formation' : 'Training'}</div>
+              <div className="text-base sm:text-lg font-bold text-amber-600">
+                {formatHours(monthTrainingHours)} ({monthTrainingHours.toFixed(2)}h)
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -258,11 +362,21 @@ export default function CalendarView({ selectedMonth, checkIns, onDayClick }: Ca
                 <div className="space-y-0.5 sm:space-y-1">
                   {/* Hide caregiver names on mobile, show on desktop */}
                   <div className="hidden sm:block">
-                    {caregivers.map((name, idx) => (
-                      <div key={idx} className="text-xs font-medium text-gray-800 truncate">
-                        {name}
-                      </div>
-                    ))}
+                    {caregivers.map((name, idx) => {
+                      const color = getColor(name, caregiverColors, allCaregiverNames);
+                      return (
+                        <div
+                          key={idx}
+                          className="text-xs font-medium truncate px-1 py-0.5 rounded"
+                          style={{
+                            color: color,
+                            backgroundColor: hexToRgba(color, 0.1)
+                          }}
+                        >
+                          {name}
+                        </div>
+                      );
+                    })}
                   </div>
                   {/* Show just a dot indicator on mobile */}
                   <div className="sm:hidden flex items-center gap-1">
