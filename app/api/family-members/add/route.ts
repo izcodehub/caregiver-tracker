@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Create admin client with service role key
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if email already exists for this beneficiary
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('family_members')
       .select('id')
       .eq('beneficiary_id', beneficiary_id)
@@ -29,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create family member record
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('family_members')
       .insert({
         beneficiary_id,
@@ -57,22 +69,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Get beneficiary and inviter info for email
-    const { data: beneficiary } = await supabase
+    const { data: beneficiary } = await supabaseAdmin
       .from('beneficiaries')
       .select('name')
       .eq('id', beneficiary_id)
       .single();
 
     // Get inviter (primary family member) info
-    const { data: primaryFamily } = await supabase
+    const { data: primaryFamily } = await supabaseAdmin
       .from('family_members')
       .select('name')
       .eq('beneficiary_id', beneficiary_id)
       .eq('role', 'primary')
       .single();
 
-    // Create Supabase Auth user and send magic link
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // Create Supabase Auth user with admin client
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       email_confirm: true,
       user_metadata: {
@@ -88,13 +100,13 @@ export async function POST(request: NextRequest) {
       // Continue - family member record exists
     } else {
       // Update family_members with auth_user_id
-      await supabase
+      await supabaseAdmin
         .from('family_members')
         .update({ auth_user_id: authData.user.id })
         .eq('id', data.id);
 
-      // Send magic link
-      const { error: magicLinkError } = await supabase.auth.signInWithOtp({
+      // Send magic link using admin client
+      const { error: magicLinkError } = await supabaseAdmin.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${beneficiary_id}`,
