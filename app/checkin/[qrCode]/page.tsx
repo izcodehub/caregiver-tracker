@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { uploadPhoto } from '@/lib/storage';
-import { Camera, MapPin, LogIn, LogOut, Loader2 } from 'lucide-react';
+import { Camera, MapPin, LogIn, LogOut, Loader2, Plus, ChevronDown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageToggle from '@/components/LanguageToggle';
 
@@ -26,8 +26,11 @@ export default function CheckInPage() {
   const [success, setSuccess] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [caregiverSuggestions, setCaregiverSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeCaregivers, setActiveCaregivers] = useState<string[]>([]);
+  const [showAddCaregiver, setShowAddCaregiver] = useState(false);
+  const [newCaregiverName, setNewCaregiverName] = useState('');
+  const [showPhotoSection, setShowPhotoSection] = useState(false);
+  const [savingNewCaregiver, setSavingNewCaregiver] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -36,8 +39,14 @@ export default function CheckInPage() {
   useEffect(() => {
     loadElderlyData();
     getCurrentLocation();
-    loadCaregiverNames();
   }, [qrCode]);
+
+  // Load caregiver names after elderly data is loaded
+  useEffect(() => {
+    if (elderly?.id) {
+      loadCaregiverNames();
+    }
+  }, [elderly?.id]);
 
   const loadElderlyData = async () => {
     try {
@@ -101,6 +110,10 @@ export default function CheckInPage() {
       } else {
         // No one checked in, default to check-in
         setAction('check-in');
+        // Get most recent caregiver from check-ins
+        if (checkIns.length > 0) {
+          setCaregiverName(checkIns[checkIns.length - 1].caregiver_name);
+        }
       }
     } catch (err) {
       console.error('Error checking active caregivers:', err);
@@ -108,64 +121,111 @@ export default function CheckInPage() {
   };
 
   const loadCaregiverNames = async () => {
+    if (!elderly?.id) return;
+
     try {
       const { data, error } = await supabase
-        .from('check_in_outs')
-        .select('caregiver_name');
+        .from('caregivers')
+        .select('name')
+        .eq('beneficiary_id', elderly.id)
+        .eq('is_active', true)
+        .order('name');
 
       if (error) throw error;
 
       // Get unique caregiver names
-      const uniqueNames = [...new Set(data.map(item => item.caregiver_name))];
-      setCaregiverSuggestions(uniqueNames.sort());
+      const names = data.map(c => c.name);
+      setCaregiverSuggestions(names);
     } catch (err) {
       console.error('Error loading caregiver names:', err);
     }
   };
 
-  const handleNameChange = (value: string) => {
-    setCaregiverName(value);
-    setShowSuggestions(value.length > 0);
-
-    // Smart action switching based on name
-    if (activeCaregivers.length > 0) {
-      if (activeCaregivers.includes(value)) {
-        // Typing a name that's already checked in → switch to check-out
-        setAction('check-out');
-      } else if (value.length > 0 && !activeCaregivers.includes(value)) {
-        // Typing a different name (second caregiver) → switch to check-in
-        setAction('check-in');
-      }
+  const handleDropdownChange = (value: string) => {
+    if (value === '__add_new__') {
+      setShowAddCaregiver(true);
+      setNewCaregiverName('');
+      return;
     }
-  };
 
-  const handleSuggestionClick = (name: string) => {
-    setCaregiverName(name);
-    setShowSuggestions(false);
+    setCaregiverName(value);
 
     // If selecting an active caregiver, switch to check-out
-    if (activeCaregivers.includes(name)) {
+    if (activeCaregivers.includes(value)) {
       setAction('check-out');
+    } else {
+      setAction('check-in');
     }
   };
 
-  const getFilteredSuggestions = () => {
-    if (!caregiverName) return [];
-
-    // For check-out, prioritize active caregivers
-    if (action === 'check-out') {
-      const activeMatches = activeCaregivers.filter(name =>
-        name.toLowerCase().includes(caregiverName.toLowerCase())
-      );
-
-      if (activeMatches.length > 0) {
-        return activeMatches.slice(0, 5);
-      }
+  const handleAddNewCaregiver = async () => {
+    if (!newCaregiverName.trim()) {
+      setError(t('checkIn.enterNameError'));
+      return;
     }
 
-    return caregiverSuggestions.filter(name =>
-      name.toLowerCase().includes(caregiverName.toLowerCase())
-    ).slice(0, 5);
+    if (!elderly?.id) {
+      setError('Beneficiary not found');
+      return;
+    }
+
+    setSavingNewCaregiver(true);
+    setError('');
+
+    try {
+      // Normalize name: First name capitalized + LAST NAME CAPS
+      const nameParts = newCaregiverName.trim().split(' ');
+      const normalizedName = nameParts.length >= 2
+        ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1).toLowerCase() + ' ' + nameParts[1].toUpperCase()
+        : newCaregiverName.trim().charAt(0).toUpperCase() + newCaregiverName.trim().slice(1).toLowerCase();
+
+      // Check if caregiver already exists for this beneficiary
+      const { data: existing } = await supabase
+        .from('caregivers')
+        .select('id, name')
+        .eq('beneficiary_id', elderly.id)
+        .ilike('name', normalizedName)
+        .single();
+
+      if (existing) {
+        // Caregiver already exists, just use their name
+        setCaregiverName(existing.name);
+        // Check if they're currently active
+        if (activeCaregivers.includes(existing.name)) {
+          setAction('check-out');
+        } else {
+          setAction('check-in');
+        }
+      } else {
+        // Add new caregiver for this beneficiary
+        const { error } = await supabase
+          .from('caregivers')
+          .insert({
+            beneficiary_id: elderly.id,
+            name: normalizedName
+          });
+
+        if (error) {
+          console.error('Supabase insert error:', error);
+          throw error;
+        }
+
+        console.log('Caregiver added:', normalizedName);
+        setCaregiverName(normalizedName);
+        // New caregiver should always default to check-in
+        setAction('check-in');
+      }
+
+      setShowAddCaregiver(false);
+      setNewCaregiverName('');
+      // Reload caregiver list
+      await loadCaregiverNames();
+    } catch (err: any) {
+      console.error('Error adding caregiver:', err);
+      setError(err?.message || 'Error adding new caregiver');
+    } finally {
+      setSavingNewCaregiver(false);
+    }
   };
 
   const getCurrentLocation = () => {
@@ -301,6 +361,7 @@ export default function CheckInPage() {
         setPhoto(null);
         setIsTraining(false);
         setSuccess(false);
+        setShowPhotoSection(false);
         // Reload to check new active caregivers
         checkActiveCaregivers(elderly.id);
       }, 2000);
@@ -370,43 +431,110 @@ export default function CheckInPage() {
             </div>
           )}
 
-          <div className="relative">
+          {/* Caregiver Selection */}
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               {t('checkIn.yourName')}
             </label>
-            <input
-              type="text"
-              value={caregiverName}
-              onChange={(e) => handleNameChange(e.target.value)}
-              onFocus={() => setShowSuggestions(caregiverName.length > 0)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-              placeholder={t('checkIn.enterName')}
-              required
-            />
 
-            {/* Autocomplete suggestions */}
-            {showSuggestions && getFilteredSuggestions().length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                {getFilteredSuggestions().map((name, idx) => (
+            {!showAddCaregiver && (
+              <div className="relative">
+                <style dangerouslySetInnerHTML={{
+                  __html: `
+                    .caregiver-select optgroup {
+                      background-color: #ffffff !important;
+                      font-weight: 700 !important;
+                      color: #111827 !important;
+                      font-size: 0.875rem !important;
+                    }
+                  `
+                }} />
+                <select
+                  value={caregiverName}
+                  onChange={(e) => handleDropdownChange(e.target.value)}
+                  className="caregiver-select w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 appearance-none bg-white"
+                  required
+                >
+                  <option value="">{t('checkIn.selectName')}</option>
+                  {activeCaregivers.length > 0 && (
+                    <optgroup label={t('checkIn.activeNow')} style={{ backgroundColor: '#ffffff', fontWeight: 'bold', color: '#111827' }}>
+                      {activeCaregivers.map((name, idx) => (
+                        <option
+                          key={`active-${idx}`}
+                          value={name}
+                          style={{ color: '#059669', fontWeight: '500' }}
+                        >
+                          ● {name} - {t('checkIn.arrived')}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {caregiverSuggestions.filter(name => !activeCaregivers.includes(name)).length > 0 && (
+                    <optgroup label={t('checkIn.allCaregivers')} style={{ backgroundColor: '#ffffff', fontWeight: 'bold', color: '#111827' }}>
+                      {caregiverSuggestions
+                        .filter(name => !activeCaregivers.includes(name))
+                        .map((name, idx) => (
+                          <option key={idx} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                  <option value="__add_new__">+ {t('checkIn.addYourName')}</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
+              </div>
+            )}
+
+            {/* Inline Add New Caregiver */}
+            {showAddCaregiver && (
+              <div className="space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <input
+                  type="text"
+                  value={newCaregiverName}
+                  onChange={(e) => setNewCaregiverName(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddNewCaregiver();
+                    }
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  placeholder={t('checkIn.typeYourName')}
+                  autoFocus
+                />
+                <div className="flex gap-2">
                   <button
-                    key={idx}
                     type="button"
-                    onClick={() => handleSuggestionClick(name)}
-                    className={`w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-900 transition-colors ${
-                      activeCaregivers.includes(name) ? 'bg-green-50 border-l-4 border-green-500' : ''
-                    }`}
+                    onClick={() => {
+                      setShowAddCaregiver(false);
+                      setNewCaregiverName('');
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
                   >
-                    {name}
-                    {activeCaregivers.includes(name) && (
-                      <span className="ml-2 text-xs text-green-600">● {t('checkIn.checkIn')}</span>
+                    {t('common.cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddNewCaregiver}
+                    disabled={savingNewCaregiver}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-gray-400"
+                  >
+                    {savingNewCaregiver ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="animate-spin" size={16} />
+                        {t('checkIn.submitting')}
+                      </span>
+                    ) : (
+                      t('checkIn.saveMyName')
                     )}
                   </button>
-                ))}
+                </div>
               </div>
             )}
           </div>
 
+          {/* Action buttons */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               {t('checkIn.action')}
@@ -456,53 +584,79 @@ export default function CheckInPage() {
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t('checkIn.photoOptional')}
-            </label>
-            {!photo && !cameraActive && (
-              <button
-                type="button"
-                onClick={startCamera}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                <Camera size={20} />
-                {t('checkIn.takePhoto')}
-              </button>
-            )}
+          {/* Collapsed Photo Section */}
+          {!showPhotoSection && (
+            <button
+              type="button"
+              onClick={() => setShowPhotoSection(true)}
+              className="w-full text-left text-sm text-blue-600 hover:underline"
+            >
+              + {t('checkIn.photoOptional')}
+            </button>
+          )}
 
-            {cameraActive && !photo && (
-              <div className="space-y-2">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full rounded-lg bg-gray-900"
-                />
+          {showPhotoSection && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  {t('checkIn.photoOptional')}
+                </label>
                 <button
                   type="button"
-                  onClick={capturePhoto}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={() => {
+                    setShowPhotoSection(false);
+                    setPhoto(null);
+                    stopCamera();
+                  }}
+                  className="text-sm text-gray-500 hover:text-gray-700"
                 >
-                  {t('checkIn.capture')}
+                  {t('checkIn.hide') || 'Hide'}
                 </button>
               </div>
-            )}
-
-            {photo && (
-              <div ref={photoPreviewRef} className="space-y-2">
-                <img src={photo} alt="Captured" className="w-full rounded-lg" />
+              {!photo && !cameraActive && (
                 <button
                   type="button"
-                  onClick={retakePhoto}
-                  className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  onClick={startCamera}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  {t('checkIn.retake')}
+                  <Camera size={20} />
+                  {t('checkIn.takePhoto')}
                 </button>
-              </div>
-            )}
-          </div>
+              )}
+
+              {cameraActive && !photo && (
+                <div className="space-y-2">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full rounded-lg bg-gray-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {t('checkIn.capture')}
+                  </button>
+                </div>
+              )}
+
+              {photo && (
+                <div ref={photoPreviewRef} className="space-y-2">
+                  <img src={photo} alt="Captured" className="w-full rounded-lg" />
+                  <button
+                    type="button"
+                    onClick={retakePhoto}
+                    className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    {t('checkIn.retake')}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {location && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
