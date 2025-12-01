@@ -47,9 +47,14 @@ export default function QRCodeGenerator({ qrCode, elderlyName }: QRCodeGenerator
           includeMargin
         />
       </div>
-      <p className="text-sm text-gray-600 text-center max-w-xs">
-        Scan this QR code to check in/out
-      </p>
+      <a
+        href={checkInUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-sm text-blue-600 hover:underline text-center max-w-xs break-all"
+      >
+        {checkInUrl}
+      </a>
       <button
         onClick={downloadQRCode}
         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
