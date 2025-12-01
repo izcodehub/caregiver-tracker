@@ -747,9 +747,20 @@ export default function DashboardPage() {
                             <CheckCircle className="text-green-600" size={24} />
                             <div className="flex-1">
                               <p className="font-semibold text-gray-800">{pair.checkIn.caregiver_name}</p>
-                              <div className="flex items-center gap-1 text-sm text-gray-600">
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Clock size={14} />
                                 <span>{format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}</span>
+                                {pair.checkIn.photo_url && (
+                                  <>
+                                    <span className="text-gray-400">•</span>
+                                    <button
+                                      onClick={() => setShowPhoto(pair.checkIn.photo_url!)}
+                                      className="text-blue-600 hover:underline"
+                                    >
+                                      {language === 'fr' ? 'Voir photo' : 'View photo'}
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -759,9 +770,20 @@ export default function DashboardPage() {
                               <XCircle className="text-red-600" size={24} />
                               <div className="flex-1">
                                 <p className="font-semibold text-gray-800">{pair.checkOut.caregiver_name}</p>
-                                <div className="flex items-center gap-1 text-sm text-gray-600">
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
                                   <Clock size={14} />
                                   <span>{format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}</span>
+                                  {pair.checkOut.photo_url && (
+                                    <>
+                                      <span className="text-gray-400">•</span>
+                                      <button
+                                        onClick={() => setShowPhoto(pair.checkOut!.photo_url!)}
+                                        className="text-blue-600 hover:underline"
+                                      >
+                                        {language === 'fr' ? 'Voir photo' : 'View photo'}
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -784,6 +806,17 @@ export default function DashboardPage() {
                               <div className="flex items-center gap-2 text-gray-600 mt-1">
                                 <Clock size={16} />
                                 <span className="font-medium">{format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}</span>
+                                {pair.checkIn.photo_url && (
+                                  <>
+                                    <span className="text-gray-400">•</span>
+                                    <button
+                                      onClick={() => setShowPhoto(pair.checkIn.photo_url!)}
+                                      className="text-blue-600 hover:underline"
+                                    >
+                                      {language === 'fr' ? 'Voir photo' : 'View photo'}
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -813,6 +846,17 @@ export default function DashboardPage() {
                                 <div className="flex items-center gap-2 text-gray-600 mt-1">
                                   <Clock size={16} />
                                   <span className="font-medium">{format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}</span>
+                                  {pair.checkOut.photo_url && (
+                                    <>
+                                      <span className="text-gray-400">•</span>
+                                      <button
+                                        onClick={() => setShowPhoto(pair.checkOut!.photo_url!)}
+                                        className="text-blue-600 hover:underline"
+                                      >
+                                        {language === 'fr' ? 'Voir photo' : 'View photo'}
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1120,9 +1164,20 @@ export default function DashboardPage() {
                                         <CheckCircle className="text-green-600" size={16} />
                                         <div className="flex-1">
                                           <p className="font-medium text-gray-800 text-sm">{pair.checkIn.caregiver_name}</p>
-                                          <div className="flex items-center gap-1 text-xs text-gray-600">
+                                          <div className="flex items-center gap-2 text-xs text-gray-600">
                                             <Clock size={12} />
                                             <span>{format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}</span>
+                                            {pair.checkIn.photo_url && (
+                                              <>
+                                                <span className="text-gray-400">•</span>
+                                                <button
+                                                  onClick={() => setShowPhoto(pair.checkIn.photo_url!)}
+                                                  className="text-blue-600 hover:underline"
+                                                >
+                                                  {language === 'fr' ? 'Photo' : 'Photo'}
+                                                </button>
+                                              </>
+                                            )}
                                           </div>
                                         </div>
                                       </div>
@@ -1137,9 +1192,20 @@ export default function DashboardPage() {
                                           <XCircle className="text-red-600" size={16} />
                                           <div className="flex-1">
                                             <p className="font-medium text-gray-800 text-sm">{pair.checkOut.caregiver_name}</p>
-                                            <div className="flex items-center gap-1 text-xs text-gray-600">
+                                            <div className="flex items-center gap-2 text-xs text-gray-600">
                                               <Clock size={12} />
                                               <span>{format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}</span>
+                                              {pair.checkOut.photo_url && (
+                                                <>
+                                                  <span className="text-gray-400">•</span>
+                                                  <button
+                                                    onClick={() => setShowPhoto(pair.checkOut!.photo_url!)}
+                                                    className="text-blue-600 hover:underline"
+                                                  >
+                                                    {language === 'fr' ? 'Photo' : 'Photo'}
+                                                  </button>
+                                                </>
+                                              )}
                                             </div>
                                           </div>
                                         </div>
@@ -1163,9 +1229,20 @@ export default function DashboardPage() {
                                       <CheckCircle className="text-green-600" size={20} />
                                       <div className="flex-1">
                                         <p className="font-medium text-gray-800">{pair.checkIn.caregiver_name}</p>
-                                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                                        <div className="flex items-center gap-2 text-sm text-gray-600">
                                           <Clock size={14} />
                                           <span>{format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}</span>
+                                          {pair.checkIn.photo_url && (
+                                            <>
+                                              <span className="text-gray-400">•</span>
+                                              <button
+                                                onClick={() => setShowPhoto(pair.checkIn.photo_url!)}
+                                                className="text-blue-600 hover:underline"
+                                              >
+                                                {language === 'fr' ? 'Photo' : 'Photo'}
+                                              </button>
+                                            </>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -1192,9 +1269,20 @@ export default function DashboardPage() {
                                         <XCircle className="text-red-600" size={20} />
                                         <div className="flex-1">
                                           <p className="font-medium text-gray-800">{pair.checkOut.caregiver_name}</p>
-                                          <div className="flex items-center gap-1 text-sm text-gray-600">
+                                          <div className="flex items-center gap-2 text-sm text-gray-600">
                                             <Clock size={14} />
                                             <span>{format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}</span>
+                                            {pair.checkOut.photo_url && (
+                                              <>
+                                                <span className="text-gray-400">•</span>
+                                                <button
+                                                  onClick={() => setShowPhoto(pair.checkOut!.photo_url!)}
+                                                  className="text-blue-600 hover:underline"
+                                                >
+                                                  {language === 'fr' ? 'Photo' : 'Photo'}
+                                                </button>
+                                              </>
+                                            )}
                                           </div>
                                         </div>
                                       </div>
@@ -1225,14 +1313,15 @@ export default function DashboardPage() {
           className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
           onClick={() => setShowPhoto(null)}
         >
-          <div className="relative max-w-2xl w-full">
+          <div className="relative max-w-3xl max-h-[90vh] w-auto" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => setShowPhoto(null)}
-              className="absolute top-4 right-4 bg-white rounded-full p-2 hover:bg-gray-100"
+              className="absolute -top-3 -right-3 bg-white rounded-full p-2 hover:bg-gray-100 shadow-lg z-10"
+              aria-label="Close"
             >
-              <XCircle size={24} />
+              <X size={24} className="text-gray-700" />
             </button>
-            <img src={showPhoto} alt="Check-in photo" className="w-full rounded-lg" />
+            <img src={showPhoto} alt="Check-in photo" className="max-w-full max-h-[90vh] rounded-lg object-contain" />
           </div>
         </div>
       )}
