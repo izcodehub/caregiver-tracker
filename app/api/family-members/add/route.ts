@@ -56,29 +56,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get beneficiary name for email
+    // Get beneficiary and inviter info for email
     const { data: beneficiary } = await supabase
       .from('beneficiaries')
       .select('name')
       .eq('id', beneficiary_id)
       .single();
 
-    // Send magic link email via Supabase Auth
-    const { error: magicLinkError } = await supabase.auth.signInWithOtp({
+    // Get inviter (primary family member) info
+    const { data: primaryFamily } = await supabase
+      .from('family_members')
+      .select('name')
+      .eq('beneficiary_id', beneficiary_id)
+      .eq('role', 'primary')
+      .single();
+
+    // Create Supabase Auth user and send magic link
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
-      options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${beneficiary_id}`,
-        data: {
-          name,
-          beneficiary_id,
-          beneficiary_name: beneficiary?.name
-        }
+      email_confirm: true,
+      user_metadata: {
+        name,
+        inviter_name: primaryFamily?.name || 'Le membre principal',
+        beneficiary_name: beneficiary?.name || 'le bénéficiaire',
+        beneficiary_id
       }
     });
 
-    if (magicLinkError) {
-      console.error('Magic link error:', magicLinkError);
-      // Don't fail - family member was added successfully
+    if (authError) {
+      console.error('Auth user creation error:', authError);
+      // Continue - family member record exists
+    } else {
+      // Update family_members with auth_user_id
+      await supabase
+        .from('family_members')
+        .update({ auth_user_id: authData.user.id })
+        .eq('id', data.id);
+
+      // Send magic link
+      const { error: magicLinkError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${beneficiary_id}`,
+        }
+      });
+
+      if (magicLinkError) {
+        console.error('Magic link error:', magicLinkError);
+      }
     }
 
     return NextResponse.json({
