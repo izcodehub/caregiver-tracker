@@ -56,6 +56,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get beneficiary name for email
+    const { data: beneficiary } = await supabase
+      .from('beneficiaries')
+      .select('name')
+      .eq('id', beneficiary_id)
+      .single();
+
+    // Send magic link email via Supabase Auth
+    const { error: magicLinkError } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${beneficiary_id}`,
+        data: {
+          name,
+          beneficiary_id,
+          beneficiary_name: beneficiary?.name
+        }
+      }
+    });
+
+    if (magicLinkError) {
+      console.error('Magic link error:', magicLinkError);
+      // Don't fail - family member was added successfully
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Family member added successfully',
