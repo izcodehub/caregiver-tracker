@@ -339,20 +339,30 @@ function CheckInContent() {
         },
         (error) => {
           console.error('Error getting location:', error);
+          setShowLocationHelp(false); // Close modal on error
           if (error.code === error.PERMISSION_DENIED) {
             setLocationError('Location access denied');
-            if (verificationMethod === 'qr') {
-              setShowLocationHelp(true);
-            }
+            setError(t('language') === 'fr'
+              ? 'Accès à la localisation refusé. Veuillez activer la localisation dans les paramètres de votre navigateur.'
+              : 'Location access denied. Please enable location in your browser settings.');
           } else if (error.code === error.POSITION_UNAVAILABLE) {
             setLocationError('Location unavailable');
+            setError(t('language') === 'fr'
+              ? 'Position indisponible. Vérifiez que le GPS est activé.'
+              : 'Location unavailable. Check that GPS is enabled.');
           } else if (error.code === error.TIMEOUT) {
             setLocationError('Location request timeout');
+            setError(t('language') === 'fr'
+              ? 'Délai d\'attente de localisation expiré.'
+              : 'Location request timeout.');
           }
         }
       );
     } else {
       setLocationError('Geolocation not supported');
+      setError(t('language') === 'fr'
+        ? 'Géolocalisation non prise en charge par ce navigateur.'
+        : 'Geolocation not supported by this browser.');
     }
   };
 
@@ -410,9 +420,10 @@ function CheckInContent() {
 
     // For QR code method (no secret), geolocation is MANDATORY
     if (verificationMethod === 'qr' && (!location || !location.lat || !location.lng)) {
-      setError('Geolocation is required when using QR code. Please enable location services.');
+      setError(t('language') === 'fr'
+        ? 'La localisation est requise pour le code QR. Veuillez cliquer sur "Localisation requise" ci-dessus.'
+        : 'Geolocation is required for QR code. Please click "Geolocation required" above.');
       setLocationError('Location required for QR code check-in');
-      setShowLocationHelp(true);
       return;
     }
 
@@ -839,8 +850,8 @@ function CheckInContent() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
               <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                  <MapPin className="text-red-600" size={32} />
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                  <MapPin className="text-blue-600" size={32} />
                 </div>
 
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -849,14 +860,13 @@ function CheckInContent() {
 
                 <p className="text-gray-700 mb-6">
                   {t('language') === 'fr'
-                    ? "Le code QR nécessite votre localisation pour vérifier que vous êtes sur place. Votre position sera uniquement utilisée pour confirmer votre présence physique."
-                    : "QR code check-in requires your location to verify you are on-site. Your location will only be used to confirm your physical presence."}
+                    ? "Le code QR nécessite votre localisation pour vérifier que vous êtes sur place. Cliquez sur \"Autoriser\" pour activer la localisation."
+                    : "QR code check-in requires your location to verify you are on-site. Click \"Allow\" to enable location."}
                 </p>
 
                 <div className="w-full space-y-3">
                   <button
                     onClick={() => {
-                      setShowLocationHelp(false);
                       getCurrentLocation();
                     }}
                     className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
