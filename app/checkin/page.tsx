@@ -554,12 +554,21 @@ function CheckInContent() {
               {validated && (
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <p className="text-xs text-green-600 flex items-center gap-1">
-                    ✓ {verificationMethod === 'nfc' ? 'NFC verified' : 'QR code verified'}
+                    ✓ {verificationMethod === 'nfc'
+                      ? (t('language') === 'fr' ? 'NFC vérifié' : 'NFC verified')
+                      : (t('language') === 'fr' ? 'QR code vérifié' : 'QR code verified')}
                   </p>
                   {verificationMethod === 'qr' && (
-                    <p className="text-xs text-orange-600 flex items-center gap-1">
-                      <MapPin size={12} /> Geolocation required
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowLocationHelp(true)}
+                      className="text-xs text-orange-600 flex items-center gap-1 hover:text-orange-700 hover:underline cursor-pointer"
+                    >
+                      <MapPin size={12} />
+                      {location
+                        ? (t('language') === 'fr' ? '✓ Localisation activée' : '✓ Location enabled')
+                        : (t('language') === 'fr' ? 'Localisation requise - Cliquer ici' : 'Geolocation required - Click here')}
+                    </button>
                   )}
                 </div>
               )}
@@ -618,61 +627,45 @@ function CheckInContent() {
                     </button>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-3">
+              ) : caregiverSuggestions.length > 0 ? (
+                <select
+                  value={caregiverName}
+                  onChange={(e) => handleDropdownChange(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                >
+                  <option value="">{t('checkIn.selectName')}</option>
+
+                  {/* Active caregivers optgroup */}
                   {activeCaregivers.length > 0 && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <p className="text-sm font-medium text-green-900 mb-2">{t('checkIn.activeNow')}</p>
-                      <div className="space-y-1">
-                        {activeCaregivers.map(name => (
-                          <button
-                            key={name}
-                            type="button"
-                            onClick={() => {
-                              setCaregiverName(name);
-                              setAction('check-out');
-                            }}
-                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                              caregiverName === name && action === 'check-out'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-white text-gray-900 border border-green-300 hover:bg-green-100'
-                            }`}
-                          >
-                            {name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    <optgroup label={t('checkIn.activeNow')}>
+                      {activeCaregivers.map(name => (
+                        <option key={name} value={name}>✓ {name}</option>
+                      ))}
+                    </optgroup>
                   )}
 
-                  {caregiverSuggestions.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-700 mb-2">{t('checkIn.allCaregivers')}</p>
-                      <select
-                        value={caregiverName}
-                        onChange={(e) => handleDropdownChange(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      >
-                        <option value="">{t('checkIn.selectName')}</option>
-                        {caregiverSuggestions.map(name => (
+                  {/* Other caregivers optgroup */}
+                  {caregiverSuggestions.filter(name => !activeCaregivers.includes(name)).length > 0 && (
+                    <optgroup label={t('checkIn.allCaregivers')}>
+                      {caregiverSuggestions
+                        .filter(name => !activeCaregivers.includes(name))
+                        .map(name => (
                           <option key={name} value={name}>{name}</option>
                         ))}
-                        <option value="__add_new__">+ {t('checkIn.addYourName')}</option>
-                      </select>
-                    </div>
+                    </optgroup>
                   )}
 
-                  {caregiverSuggestions.length === 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAddCaregiver(true)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-blue-500 hover:text-blue-600 transition-colors"
-                    >
-                      <Plus size={20} />
-                      {t('checkIn.addYourName')}
-                    </button>
-                  )}
-                </div>
+                  <option value="__add_new__">+ {t('checkIn.addYourName')}</option>
+                </select>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowAddCaregiver(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-blue-500 hover:text-blue-600 transition-colors"
+                >
+                  <Plus size={20} />
+                  {t('checkIn.addYourName')}
+                </button>
               )}
             </div>
 
@@ -841,111 +834,42 @@ function CheckInContent() {
           </form>
         </div>
 
-        {/* Location Help Modal */}
+        {/* Location Permission Modal */}
         {showLocationHelp && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <MapPin className="text-red-600" size={24} />
-                  Location Required
-                </h3>
-                <button
-                  onClick={() => setShowLocationHelp(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <AlertCircle size={24} />
-                </button>
-              </div>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                  <MapPin className="text-red-600" size={32} />
+                </div>
 
-              <div className="space-y-4 text-sm text-gray-700">
-                <p className="font-semibold text-red-600">
-                  QR code check-in requires your location to verify you are on-site.
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  {t('language') === 'fr' ? 'Localisation requise' : 'Location Required'}
+                </h3>
+
+                <p className="text-gray-700 mb-6">
+                  {t('language') === 'fr'
+                    ? "Le code QR nécessite votre localisation pour vérifier que vous êtes sur place. Votre position sera uniquement utilisée pour confirmer votre présence physique."
+                    : "QR code check-in requires your location to verify you are on-site. Your location will only be used to confirm your physical presence."}
                 </p>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="font-semibold text-blue-900 mb-2">How to enable location:</p>
-
-                  {/* Detect browser/device */}
-                  {typeof navigator !== 'undefined' && (
-                    <>
-                      {/* iOS Safari */}
-                      {/iPhone|iPad|iPod/.test(navigator.userAgent) && (
-                        <ol className="list-decimal list-inside space-y-2 text-blue-800">
-                          <li>Go to iPhone <strong>Settings</strong></li>
-                          <li>Scroll down and tap <strong>Safari</strong></li>
-                          <li>Tap <strong>Location</strong></li>
-                          <li>Select <strong>Ask</strong> or <strong>Allow</strong></li>
-                          <li>Return here and tap the button below to try again</li>
-                        </ol>
-                      )}
-
-                      {/* Android Chrome */}
-                      {/Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent) && (
-                        <ol className="list-decimal list-inside space-y-2 text-blue-800">
-                          <li>Tap the <strong>lock icon</strong> or <strong>site settings</strong> in the address bar</li>
-                          <li>Tap <strong>Permissions</strong></li>
-                          <li>Find <strong>Location</strong> and select <strong>Allow</strong></li>
-                          <li>Tap the button below to try again</li>
-                        </ol>
-                      )}
-
-                      {/* Desktop Chrome/Edge */}
-                      {!/iPhone|iPad|iPod|Android/.test(navigator.userAgent) && /Chrome|Edg/.test(navigator.userAgent) && (
-                        <ol className="list-decimal list-inside space-y-2 text-blue-800">
-                          <li>Click the <strong>lock icon</strong> in the address bar</li>
-                          <li>Click <strong>Site settings</strong></li>
-                          <li>Find <strong>Location</strong> and select <strong>Allow</strong></li>
-                          <li>Refresh the page or click the button below</li>
-                        </ol>
-                      )}
-
-                      {/* Desktop Firefox */}
-                      {!/iPhone|iPad|iPod|Android/.test(navigator.userAgent) && /Firefox/.test(navigator.userAgent) && (
-                        <ol className="list-decimal list-inside space-y-2 text-blue-800">
-                          <li>Click the <strong>permissions icon</strong> in the address bar</li>
-                          <li>Find <strong>Access Your Location</strong></li>
-                          <li>Click the <strong>X</strong> to remove the block</li>
-                          <li>Refresh the page or click the button below</li>
-                        </ol>
-                      )}
-
-                      {/* Generic fallback */}
-                      {!/Chrome|Edg|Firefox|Safari/.test(navigator.userAgent) && (
-                        <ol className="list-decimal list-inside space-y-2 text-blue-800">
-                          <li>Look for a <strong>location/permissions icon</strong> in your browser's address bar</li>
-                          <li>Allow location access for this site</li>
-                          <li>Refresh the page or click the button below</li>
-                        </ol>
-                      )}
-                    </>
-                  )}
+                <div className="w-full space-y-3">
+                  <button
+                    onClick={() => {
+                      setShowLocationHelp(false);
+                      getCurrentLocation();
+                    }}
+                    className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                  >
+                    {t('language') === 'fr' ? 'Autoriser la localisation' : 'Allow Location'}
+                  </button>
+                  <button
+                    onClick={() => setShowLocationHelp(false)}
+                    className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    {t('language') === 'fr' ? 'Annuler' : 'Cancel'}
+                  </button>
                 </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <p className="text-amber-900">
-                    <strong>Why is this needed?</strong><br />
-                    Location verification prevents fraudulent check-ins from photos of the QR code. Your location is only used to confirm you are physically present.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 space-y-3">
-                <button
-                  onClick={() => {
-                    setShowLocationHelp(false);
-                    getCurrentLocation();
-                  }}
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
-                >
-                  Try Again
-                </button>
-                <button
-                  onClick={() => setShowLocationHelp(false)}
-                  className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>
