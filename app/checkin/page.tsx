@@ -399,7 +399,7 @@ export default function CheckInPage() {
       let photoUrl = null;
 
       if (photo) {
-        photoUrl = await uploadPhoto(photo, elderly.id);
+        photoUrl = await uploadPhoto(photo, elderly.id, new Date().toISOString());
       }
 
       // Submit with validation
