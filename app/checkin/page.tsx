@@ -151,9 +151,19 @@ function CheckInContent() {
   useEffect(() => {
     if (beneficiaryQrCode && !blocked) {
       loadElderlyData();
-      getCurrentLocation();
+      // Only auto-request location for NFC method, not QR (QR requires manual approval)
+      if (verificationMethod === 'nfc') {
+        getCurrentLocation();
+      }
     }
   }, [beneficiaryQrCode, blocked]);
+
+  // Show location modal for QR method if location not available
+  useEffect(() => {
+    if (verificationMethod === 'qr' && validated && !location) {
+      setShowLocationHelp(true);
+    }
+  }, [verificationMethod, validated, location]);
 
   // Load caregiver names after elderly data is loaded
   useEffect(() => {
@@ -860,8 +870,8 @@ function CheckInContent() {
 
                 <p className="text-gray-700 mb-6">
                   {t('language') === 'fr'
-                    ? "Le code QR nécessite votre localisation pour vérifier que vous êtes sur place. Cliquez sur \"Autoriser\" pour activer la localisation."
-                    : "QR code check-in requires your location to verify you are on-site. Click \"Allow\" to enable location."}
+                    ? "Activez votre géolocalisation pour soumettre votre arrivée"
+                    : "Enable your geolocation to submit your arrival"}
                 </p>
 
                 <div className="w-full space-y-3">
@@ -871,7 +881,7 @@ function CheckInContent() {
                     }}
                     className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
                   >
-                    {t('language') === 'fr' ? 'Autoriser la localisation' : 'Allow Location'}
+                    {t('language') === 'fr' ? 'Activer' : 'Enable'}
                   </button>
                   <button
                     onClick={() => setShowLocationHelp(false)}
