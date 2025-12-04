@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { uploadPhoto } from '@/lib/storage';
@@ -8,7 +8,7 @@ import { Camera, MapPin, LogIn, LogOut, Loader2, Plus, ChevronDown, AlertCircle 
 import { useLanguage } from '@/contexts/LanguageContext';
 import LanguageToggle from '@/components/LanguageToggle';
 
-export default function CheckInPage() {
+function CheckInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { t } = useLanguage();
@@ -808,3 +808,19 @@ export default function CheckInPage() {
     </div>
   );
 }
+
+export default function CheckInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <Loader2 className="animate-spin mx-auto mb-4 text-blue-600" size={48} />
+          <p className="text-gray-700">Loading...</p>
+        </div>
+      </div>
+    }>
+      <CheckInContent />
+    </Suspense>
+  );
+}
+
