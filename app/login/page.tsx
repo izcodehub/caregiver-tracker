@@ -521,14 +521,6 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {!isSignUp && (
-            <div className="mt-6 text-center text-sm text-gray-600">
-              <p>{t('auth.adminCredentials') || 'Default admin credentials:'}</p>
-              <p className="font-mono text-xs mt-1">
-                admin@caregiver-tracker.com / admin123
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>
