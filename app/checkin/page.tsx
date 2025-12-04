@@ -52,7 +52,7 @@ function CheckInContent() {
     const method = searchParams.get('method'); // 'nfc' or 'qr'
 
     if (qrCode && secretParam) {
-      // Valid tap detected (NFC or QR code with secret)
+      // NFC tap detected (has secret token)
       const detectedMethod = (method === 'qr' || method === 'nfc') ? method : 'nfc';
 
       setBeneficiaryQrCode(qrCode);
@@ -70,6 +70,20 @@ function CheckInContent() {
 
       // Request challenge token from server
       requestChallengeToken(qrCode, secretParam, detectedMethod);
+    } else if (qrCode && !secretParam) {
+      // QR code scan detected (no secret) - geolocation is MANDATORY
+      setBeneficiaryQrCode(qrCode);
+      setVerificationMethod('qr');
+      setValidated(true); // Allow form to load, but geolocation required
+      setTapTimestamp(new Date().toISOString());
+
+      // Store in sessionStorage
+      sessionStorage.setItem('card_tap_time', new Date().toISOString());
+      sessionStorage.setItem('nfc_qr_code', qrCode);
+      sessionStorage.setItem('verification_method', 'qr');
+
+      // Clean URL
+      window.history.replaceState({}, '', '/checkin');
     } else {
       // No parameters - check if there's a recent tap in session
       const recentTap = sessionStorage.getItem('card_tap_time');
@@ -374,15 +388,21 @@ function CheckInContent() {
     e.preventDefault();
 
     // Block submission if no valid tap
-    if (!validated || !challengeToken || blocked) {
+    if (!validated || blocked) {
       setError('Please tap the beneficiary\'s card/QR code to start the visit.');
       return;
     }
 
-    // For QR code method, geolocation is MANDATORY
+    // For QR code method (no secret), geolocation is MANDATORY
     if (verificationMethod === 'qr' && (!location || !location.lat || !location.lng)) {
       setError('Geolocation is required when using QR code. Please enable location services.');
       setLocationError('Location required for QR code check-in');
+      return;
+    }
+
+    // For NFC method (has secret), challenge token is required
+    if (verificationMethod === 'nfc' && !challengeToken) {
+      setError('Invalid NFC tap. Please tap the card again.');
       return;
     }
 

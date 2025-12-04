@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!beneficiary_qr_code || !secret || !challenge_token || !tap_timestamp) {
+    if (!beneficiary_qr_code || !tap_timestamp) {
       return NextResponse.json(
         { error: 'Please tap the beneficiary\'s card/QR code to start the visit.' },
         { status: 400 }
@@ -33,10 +33,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // QR code method requires geolocation
+    // QR code method (no secret) requires geolocation
     if (verification_method === 'qr' && (!latitude || !longitude)) {
       return NextResponse.json(
         { error: 'Geolocation is required when using QR code. Please enable location services.' },
+        { status: 400 }
+      );
+    }
+
+    // NFC method (has secret) requires secret and challenge token
+    if (verification_method === 'nfc' && (!secret || !challenge_token)) {
+      return NextResponse.json(
+        { error: 'Invalid NFC credentials.' },
         { status: 400 }
       );
     }
@@ -55,54 +63,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate secret matches
-    if (beneficiary.nfc_secret !== secret) {
-      return NextResponse.json(
-        { error: 'Invalid credentials. Please tap the card/QR again.' },
-        { status: 403 }
-      );
+    // Only validate secret for NFC method
+    if (verification_method === 'nfc') {
+      // Validate secret matches
+      if (beneficiary.nfc_secret !== secret) {
+        return NextResponse.json(
+          { error: 'Invalid NFC credentials. Please tap the card again.' },
+          { status: 403 }
+        );
+      }
+
+      // Check if challenge token was already used
+      const { data: usedToken } = await supabase
+        .from('nfc_used_tokens')
+        .select('id')
+        .eq('challenge_token', challenge_token)
+        .single();
+
+      if (usedToken) {
+        return NextResponse.json(
+          { error: 'This NFC tap has already been used. Please tap the card again.' },
+          { status: 400 }
+        );
+      }
+
+      // Validate tap timestamp is recent (within 15 minutes)
+      const tapTime = new Date(tap_timestamp).getTime();
+      const now = Date.now();
+      const minutesElapsed = (now - tapTime) / 1000 / 60;
+
+      if (minutesElapsed > 15) {
+        return NextResponse.json(
+          { error: 'NFC tap expired. Please tap the card again.' },
+          { status: 400 }
+        );
+      }
+
+      if (minutesElapsed < 0) {
+        return NextResponse.json(
+          { error: 'Invalid tap timestamp' },
+          { status: 400 }
+        );
+      }
+
+      // Mark token as used (prevents replay attacks)
+      await supabase
+        .from('nfc_used_tokens')
+        .insert({
+          challenge_token,
+          beneficiary_id: beneficiary.id,
+        });
     }
-
-    // Check if challenge token was already used
-    const { data: usedToken } = await supabase
-      .from('nfc_used_tokens')
-      .select('id')
-      .eq('challenge_token', challenge_token)
-      .single();
-
-    if (usedToken) {
-      return NextResponse.json(
-        { error: 'This NFC tap has already been used. Please tap the card again.' },
-        { status: 400 }
-      );
-    }
-
-    // Validate tap timestamp is recent (within 15 minutes)
-    const tapTime = new Date(tap_timestamp).getTime();
-    const now = Date.now();
-    const minutesElapsed = (now - tapTime) / 1000 / 60;
-
-    if (minutesElapsed > 15) {
-      return NextResponse.json(
-        { error: 'NFC tap expired. Please tap the card again.' },
-        { status: 400 }
-      );
-    }
-
-    if (minutesElapsed < 0) {
-      return NextResponse.json(
-        { error: 'Invalid tap timestamp' },
-        { status: 400 }
-      );
-    }
-
-    // Mark token as used (prevents replay attacks)
-    await supabase
-      .from('nfc_used_tokens')
-      .insert({
-        challenge_token,
-        beneficiary_id: beneficiary.id,
-      });
+    // For QR code method, no secret validation needed - geolocation is the security measure
 
     // Create the check-in/out record
     const { data: checkIn, error: checkInError } = await supabase

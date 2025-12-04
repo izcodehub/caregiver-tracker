@@ -897,9 +897,12 @@ export default function DashboardPage() {
             <div className="bg-white rounded-lg shadow-lg p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">QR Code</h2>
               <div className="flex flex-col items-center">
-                <QRCodeGenerator qrCode={elderly.qr_code} elderlyName={elderly.name} />
+                <QRCodeGenerator
+                  qrCode={elderly.qr_code}
+                  elderlyName={elderly.name}
+                />
                 <p className="mt-4 text-sm text-gray-600 text-center">
-                  Scan this code with the mobile app to check in/out
+                  Scan or click to check in/out (geolocation required)
                 </p>
               </div>
             </div>
