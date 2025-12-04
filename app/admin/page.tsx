@@ -166,7 +166,7 @@ export default function AdminPage() {
                 <Users className="text-green-600" size={24} />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Active Today</p>
+                <p className="text-sm text-gray-600">Clients with Activity Today</p>
                 <p className="text-2xl font-bold text-gray-900">{activeToday}</p>
               </div>
             </div>
