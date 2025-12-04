@@ -40,6 +40,7 @@ function CheckInContent() {
   const [showPhotoSection, setShowPhotoSection] = useState(false);
   const [savingNewCaregiver, setSavingNewCaregiver] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [showLocationHelp, setShowLocationHelp] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -333,11 +334,25 @@ function CheckInContent() {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
+          setLocationError('');
+          setShowLocationHelp(false);
         },
         (error) => {
           console.error('Error getting location:', error);
+          if (error.code === error.PERMISSION_DENIED) {
+            setLocationError('Location access denied');
+            if (verificationMethod === 'qr') {
+              setShowLocationHelp(true);
+            }
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            setLocationError('Location unavailable');
+          } else if (error.code === error.TIMEOUT) {
+            setLocationError('Location request timeout');
+          }
         }
       );
+    } else {
+      setLocationError('Geolocation not supported');
     }
   };
 
@@ -397,6 +412,7 @@ function CheckInContent() {
     if (verificationMethod === 'qr' && (!location || !location.lat || !location.lng)) {
       setError('Geolocation is required when using QR code. Please enable location services.');
       setLocationError('Location required for QR code check-in');
+      setShowLocationHelp(true);
       return;
     }
 
@@ -824,6 +840,116 @@ function CheckInContent() {
             </button>
           </form>
         </div>
+
+        {/* Location Help Modal */}
+        {showLocationHelp && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <MapPin className="text-red-600" size={24} />
+                  Location Required
+                </h3>
+                <button
+                  onClick={() => setShowLocationHelp(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <AlertCircle size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-4 text-sm text-gray-700">
+                <p className="font-semibold text-red-600">
+                  QR code check-in requires your location to verify you are on-site.
+                </p>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="font-semibold text-blue-900 mb-2">How to enable location:</p>
+
+                  {/* Detect browser/device */}
+                  {typeof navigator !== 'undefined' && (
+                    <>
+                      {/* iOS Safari */}
+                      {/iPhone|iPad|iPod/.test(navigator.userAgent) && (
+                        <ol className="list-decimal list-inside space-y-2 text-blue-800">
+                          <li>Go to iPhone <strong>Settings</strong></li>
+                          <li>Scroll down and tap <strong>Safari</strong></li>
+                          <li>Tap <strong>Location</strong></li>
+                          <li>Select <strong>Ask</strong> or <strong>Allow</strong></li>
+                          <li>Return here and tap the button below to try again</li>
+                        </ol>
+                      )}
+
+                      {/* Android Chrome */}
+                      {/Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent) && (
+                        <ol className="list-decimal list-inside space-y-2 text-blue-800">
+                          <li>Tap the <strong>lock icon</strong> or <strong>site settings</strong> in the address bar</li>
+                          <li>Tap <strong>Permissions</strong></li>
+                          <li>Find <strong>Location</strong> and select <strong>Allow</strong></li>
+                          <li>Tap the button below to try again</li>
+                        </ol>
+                      )}
+
+                      {/* Desktop Chrome/Edge */}
+                      {!/iPhone|iPad|iPod|Android/.test(navigator.userAgent) && /Chrome|Edg/.test(navigator.userAgent) && (
+                        <ol className="list-decimal list-inside space-y-2 text-blue-800">
+                          <li>Click the <strong>lock icon</strong> in the address bar</li>
+                          <li>Click <strong>Site settings</strong></li>
+                          <li>Find <strong>Location</strong> and select <strong>Allow</strong></li>
+                          <li>Refresh the page or click the button below</li>
+                        </ol>
+                      )}
+
+                      {/* Desktop Firefox */}
+                      {!/iPhone|iPad|iPod|Android/.test(navigator.userAgent) && /Firefox/.test(navigator.userAgent) && (
+                        <ol className="list-decimal list-inside space-y-2 text-blue-800">
+                          <li>Click the <strong>permissions icon</strong> in the address bar</li>
+                          <li>Find <strong>Access Your Location</strong></li>
+                          <li>Click the <strong>X</strong> to remove the block</li>
+                          <li>Refresh the page or click the button below</li>
+                        </ol>
+                      )}
+
+                      {/* Generic fallback */}
+                      {!/Chrome|Edg|Firefox|Safari/.test(navigator.userAgent) && (
+                        <ol className="list-decimal list-inside space-y-2 text-blue-800">
+                          <li>Look for a <strong>location/permissions icon</strong> in your browser's address bar</li>
+                          <li>Allow location access for this site</li>
+                          <li>Refresh the page or click the button below</li>
+                        </ol>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-amber-900">
+                    <strong>Why is this needed?</strong><br />
+                    Location verification prevents fraudulent check-ins from photos of the QR code. Your location is only used to confirm you are physically present.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <button
+                  onClick={() => {
+                    setShowLocationHelp(false);
+                    getCurrentLocation();
+                  }}
+                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                >
+                  Try Again
+                </button>
+                <button
+                  onClick={() => setShowLocationHelp(false)}
+                  className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
