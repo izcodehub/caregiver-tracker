@@ -372,10 +372,14 @@ export default function CheckInPage() {
 
       // Send push notifications to family members
       try {
-        const { data: familyMembers } = await supabase
+        console.log('Fetching family members for notifications...');
+        const { data: familyMembers, error: familyError } = await supabase
           .from('family_members')
           .select('id, notification_preferences')
           .eq('beneficiary_id', elderly.id);
+
+        console.log('Family members:', familyMembers);
+        console.log('Family error:', familyError);
 
         if (familyMembers && familyMembers.length > 0) {
           // Filter family members who have push notifications enabled
@@ -383,11 +387,15 @@ export default function CheckInPage() {
             (member) => member.notification_preferences?.push_enabled === true
           );
 
+          console.log('Notification enabled members:', notificationEnabledMembers);
+
           if (notificationEnabledMembers.length > 0) {
             const familyMemberIds = notificationEnabledMembers.map((m) => m.id);
 
+            console.log('Sending notifications to:', familyMemberIds);
+
             // Call the notification API
-            await fetch('/api/notifications/send', {
+            const notifResponse = await fetch('/api/notifications/send', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -398,7 +406,14 @@ export default function CheckInPage() {
                 timestamp: new Date().toISOString(),
               }),
             });
+
+            const notifResult = await notifResponse.json();
+            console.log('Notification API response:', notifResult);
+          } else {
+            console.log('No family members have push notifications enabled');
           }
+        } else {
+          console.log('No family members found for this beneficiary');
         }
       } catch (notificationError) {
         // Log error but don't fail the check-in/out
