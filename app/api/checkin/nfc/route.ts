@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { sendCheckInNotification, sendCheckOutNotification } from '@/lib/push-notification-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -148,6 +149,44 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to record check-in' },
         { status: 500 }
       );
+    }
+
+    // Send push notifications to family members with notifications enabled
+    try {
+      const { data: familyMembers } = await supabase
+        .from('family_members')
+        .select('id, notification_preferences')
+        .eq('user_id', beneficiary.id);
+
+      if (familyMembers && familyMembers.length > 0) {
+        // Filter family members who have notifications enabled
+        const notificationEnabledMembers = familyMembers.filter(
+          (member) => member.notification_preferences?.push_enabled === true
+        );
+
+        if (notificationEnabledMembers.length > 0) {
+          const familyMemberIds = notificationEnabledMembers.map((m) => m.id);
+
+          if (action === 'check-in') {
+            await sendCheckInNotification(
+              caregiver_name.trim(),
+              familyMemberIds,
+              new Date(tap_timestamp),
+              beneficiary.name
+            );
+          } else if (action === 'check-out') {
+            await sendCheckOutNotification(
+              caregiver_name.trim(),
+              familyMemberIds,
+              new Date(tap_timestamp),
+              beneficiary.name
+            );
+          }
+        }
+      }
+    } catch (notificationError) {
+      // Log error but don't fail the check-in/out
+      console.error('Failed to send notifications:', notificationError);
     }
 
     return NextResponse.json({

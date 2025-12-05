@@ -34,6 +34,7 @@ import QRCodeGenerator from '@/components/QRCodeGenerator';
 import CalendarView from '@/components/CalendarView';
 import CaregiverBreakdown from '@/components/CaregiverBreakdown';
 import LanguageToggle from '@/components/LanguageToggle';
+import NotificationPermissionButton from '@/components/NotificationPermissionButton';
 import { createColorMap, type CaregiverColor } from '@/lib/caregiver-colors';
 
 type CheckInOut = {
@@ -957,7 +958,7 @@ export default function DashboardPage() {
                     const primaryContact = familyMembers.find(m => m.role === 'primary');
                     if (!primaryContact) return null;
                     return (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <div className="flex items-center gap-2">
                           <User className="text-gray-400 flex-shrink-0" size={16} />
                           <span className="font-semibold text-gray-900 break-words">{primaryContact.name}</span>
@@ -978,6 +979,9 @@ export default function DashboardPage() {
                             </a>
                           </div>
                         )}
+                        <div className="pt-2 border-t border-gray-100">
+                          <NotificationPermissionButton familyMemberId={primaryContact.id} />
+                        </div>
                       </div>
                     );
                   })()}
@@ -1015,7 +1019,7 @@ export default function DashboardPage() {
                           {member.role}
                         </span>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {member.email && (
                           <div className="flex items-center gap-2 text-sm min-w-0">
                             <Mail className="text-gray-400 flex-shrink-0" size={16} />
@@ -1032,6 +1036,9 @@ export default function DashboardPage() {
                             </a>
                           </div>
                         )}
+                        <div className="pt-2 border-t border-gray-100">
+                          <NotificationPermissionButton familyMemberId={member.id} />
+                        </div>
                       </div>
                     </div>
                   ))}

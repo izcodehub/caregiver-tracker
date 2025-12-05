@@ -35,6 +35,8 @@ export default function CheckInPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const photoPreviewRef = useRef<HTMLDivElement>(null);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const cameraContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadElderlyData();
@@ -264,9 +266,10 @@ export default function CheckInPage() {
 
           videoRef.current.onloadedmetadata = () => {
             setTimeout(() => {
-              videoRef.current?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
+              // Scroll to top of page when camera opens
+              window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
               });
             }, 300);
           };
@@ -290,9 +293,9 @@ export default function CheckInPage() {
       setPhoto(photoData);
       stopCamera();
 
-      // Scroll to photo preview after capture
+      // Scroll to submit button after capture
       setTimeout(() => {
-        photoPreviewRef.current?.scrollIntoView({
+        submitButtonRef.current?.scrollIntoView({
           behavior: 'smooth',
           block: 'center'
         });
@@ -666,6 +669,7 @@ export default function CheckInPage() {
           )}
 
           <button
+            ref={submitButtonRef}
             type="submit"
             disabled={submitting}
             className={`w-full py-3 rounded-lg font-semibold transition-colors ${
