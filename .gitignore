@@ -40,8 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# PWA files
-**/public/sw.js
+# PWA files (auto-generated service workers)
+# Note: We're using a custom sw.js that should be committed
 **/public/workbox-*.js
 **/public/worker-*.js
 **/public/sw.js.map
