@@ -3,7 +3,7 @@
  * Handles sending push notifications using web-push
  */
 import webpush from 'web-push';
-import { createClient } from '@/lib/supabase-server';
+import { createClient } from '@supabase/supabase-js';
 
 // VAPID keys should be stored in environment variables
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -36,7 +36,17 @@ export async function sendNotificationToFamilyMember(
   familyMemberId: string,
   payload: NotificationPayload
 ): Promise<{ success: boolean; errors?: string[] }> {
-  const supabase = createClient();
+  // Use service role key for server-side operations
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
 
   try {
     // Get all active subscriptions for this family member
