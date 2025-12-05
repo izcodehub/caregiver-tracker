@@ -321,14 +321,13 @@ export default function CheckInPage() {
     setPhoto(photoData);
     stopCamera();
 
-      // Scroll to submit button after capture
-      setTimeout(() => {
-        submitButtonRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
-      }, 100);
-    }
+    // Scroll to submit button after capture
+    setTimeout(() => {
+      submitButtonRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }, 100);
   };
 
   const stopCamera = () => {
