@@ -260,11 +260,17 @@ export default function CheckInPage() {
       streamRef.current = stream;
       setCameraActive(true);
 
+      // Wait for next render cycle to ensure video element exists
       setTimeout(() => {
         if (videoRef.current && streamRef.current) {
           videoRef.current.srcObject = streamRef.current;
 
           videoRef.current.onloadedmetadata = () => {
+            // Ensure video starts playing
+            videoRef.current?.play().catch(err => {
+              console.error('Error playing video:', err);
+            });
+
             setTimeout(() => {
               // Scroll to top of page when camera opens
               window.scrollTo({
@@ -283,15 +289,37 @@ export default function CheckInPage() {
   };
 
   const capturePhoto = () => {
-    if (videoRef.current) {
-      const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(videoRef.current, 0, 0);
-      const photoData = canvas.toDataURL('image/jpeg', 0.8);
-      setPhoto(photoData);
-      stopCamera();
+    if (!videoRef.current) {
+      console.error('Video ref not available');
+      return;
+    }
+
+    // Check if video has valid dimensions
+    if (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0) {
+      console.error('Video not ready - width/height is 0');
+      setError('Camera not ready. Please wait a moment and try again.');
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+
+    console.log('Capturing photo - dimensions:', canvas.width, 'x', canvas.height);
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('Could not get canvas context');
+      return;
+    }
+
+    ctx.drawImage(videoRef.current, 0, 0);
+    const photoData = canvas.toDataURL('image/jpeg', 0.8);
+
+    console.log('Photo captured, data length:', photoData.length);
+
+    setPhoto(photoData);
+    stopCamera();
 
       // Scroll to submit button after capture
       setTimeout(() => {
