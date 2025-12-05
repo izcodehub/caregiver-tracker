@@ -340,11 +340,25 @@ export default function CheckInPage() {
         }
       }
 
+      // Look up caregiver ID from name
+      let caregiverId = null;
+      const { data: caregiverData } = await supabase
+        .from('caregivers')
+        .select('id')
+        .eq('beneficiary_id', elderly.id)
+        .ilike('name', caregiverName.trim())
+        .single();
+
+      if (caregiverData) {
+        caregiverId = caregiverData.id;
+      }
+
       // Insert check-in/out record
       const { error: insertError } = await supabase
         .from('check_in_outs')
         .insert({
           beneficiary_id: elderly.id,
+          caregiver_id: caregiverId,
           caregiver_name: caregiverName,
           action,
           timestamp: new Date().toISOString(),
@@ -355,6 +369,41 @@ export default function CheckInPage() {
         });
 
       if (insertError) throw insertError;
+
+      // Send push notifications to family members
+      try {
+        const { data: familyMembers } = await supabase
+          .from('family_members')
+          .select('id, notification_preferences')
+          .eq('beneficiary_id', elderly.id);
+
+        if (familyMembers && familyMembers.length > 0) {
+          // Filter family members who have push notifications enabled
+          const notificationEnabledMembers = familyMembers.filter(
+            (member) => member.notification_preferences?.push_enabled === true
+          );
+
+          if (notificationEnabledMembers.length > 0) {
+            const familyMemberIds = notificationEnabledMembers.map((m) => m.id);
+
+            // Call the notification API
+            await fetch('/api/notifications/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                familyMemberIds,
+                caregiverName: caregiverName,
+                beneficiaryName: elderly.name,
+                action,
+                timestamp: new Date().toISOString(),
+              }),
+            });
+          }
+        }
+      } catch (notificationError) {
+        // Log error but don't fail the check-in/out
+        console.error('Failed to send notifications:', notificationError);
+      }
 
       setSuccess(true);
 

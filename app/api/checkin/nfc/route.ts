@@ -117,11 +117,25 @@ export async function POST(request: NextRequest) {
     }
     // For QR code method, no secret validation needed - geolocation is the security measure
 
+    // Look up caregiver ID from name
+    let caregiverId = null;
+    const { data: caregiverData } = await supabase
+      .from('caregivers')
+      .select('id')
+      .eq('beneficiary_id', beneficiary.id)
+      .ilike('name', caregiver_name.trim())
+      .single();
+
+    if (caregiverData) {
+      caregiverId = caregiverData.id;
+    }
+
     // Create the check-in/out record
     const { data: checkIn, error: checkInError } = await supabase
       .from('check_in_outs')
       .insert({
         beneficiary_id: beneficiary.id,
+        caregiver_id: caregiverId,
         caregiver_name: caregiver_name.trim(),
         action,
         is_training: is_training || false,
@@ -156,7 +170,7 @@ export async function POST(request: NextRequest) {
       const { data: familyMembers } = await supabase
         .from('family_members')
         .select('id, notification_preferences')
-        .eq('user_id', beneficiary.id);
+        .eq('beneficiary_id', beneficiary.id);
 
       if (familyMembers && familyMembers.length > 0) {
         // Filter family members who have notifications enabled
