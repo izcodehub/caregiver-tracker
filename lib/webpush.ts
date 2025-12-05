@@ -13,7 +13,7 @@ export interface PushSubscriptionData {
  * Converts a base64 string to Uint8Array
  * Required for VAPID key conversion
  */
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): BufferSource {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding)
     .replace(/\-/g, '+')
@@ -25,7 +25,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
-  return outputArray;
+  return outputArray as BufferSource;
 }
 
 /**

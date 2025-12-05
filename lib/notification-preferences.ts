@@ -3,6 +3,12 @@
  * Helper functions for managing family member notification preferences
  */
 
+export interface QuietHours {
+  enabled: boolean;
+  start: string; // HH:MM format
+  end: string; // HH:MM format
+}
+
 export interface NotificationPreferences {
   push_enabled?: boolean;
   email_enabled?: boolean;
@@ -11,11 +17,7 @@ export interface NotificationPreferences {
   check_out?: boolean;
   missed_check_in?: boolean;
   daily_summary?: boolean;
-  quiet_hours?: {
-    enabled: boolean;
-    start: string; // HH:MM format
-    end: string; // HH:MM format
-  };
+  quiet_hours?: QuietHours;
 }
 
 export const DEFAULT_PREFERENCES: NotificationPreferences = {
@@ -74,12 +76,15 @@ export function shouldSendNotification(
 export function mergePreferences(
   userPreferences?: Partial<NotificationPreferences>
 ): NotificationPreferences {
+  const defaultQuietHours = DEFAULT_PREFERENCES.quiet_hours!;
+
   return {
     ...DEFAULT_PREFERENCES,
     ...userPreferences,
     quiet_hours: {
-      ...DEFAULT_PREFERENCES.quiet_hours,
-      ...(userPreferences?.quiet_hours || {}),
+      enabled: userPreferences?.quiet_hours?.enabled ?? defaultQuietHours.enabled,
+      start: userPreferences?.quiet_hours?.start ?? defaultQuietHours.start,
+      end: userPreferences?.quiet_hours?.end ?? defaultQuietHours.end,
     },
   };
 }
