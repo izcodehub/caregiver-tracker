@@ -151,10 +151,8 @@ function CheckInContent() {
   useEffect(() => {
     if (beneficiaryQrCode && !blocked) {
       loadElderlyData();
-      // Only auto-request location for NFC method, not QR (QR requires manual approval)
-      if (verificationMethod === 'nfc') {
-        getCurrentLocation();
-      }
+      // Don't auto-request location for NFC (optional)
+      // Location is only mandatory for QR code method
     }
   }, [beneficiaryQrCode, blocked]);
 
