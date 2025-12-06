@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { X, Download, Share } from 'lucide-react';
 
 export default function PWAInstallPrompt() {
+  const pathname = usePathname();
   const [showPrompt, setShowPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
@@ -11,6 +13,11 @@ export default function PWAInstallPrompt() {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
+    // Don't show install prompt on checkin pages
+    if (pathname?.startsWith('/checkin')) {
+      return;
+    }
+
     // Check if app is already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
