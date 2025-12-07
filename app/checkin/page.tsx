@@ -45,78 +45,87 @@ function CheckInContent() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const photoPreviewRef = useRef<HTMLDivElement>(null);
+  const hasProcessedParams = useRef(false);
 
   // Extract NFC/QR parameters from URL and clean up
   useEffect(() => {
-    const qrCode = searchParams.get('qr_code');
-    const secretParam = searchParams.get('secret');
-    const method = searchParams.get('method'); // 'nfc' or 'qr'
+    const processParams = () => {
+      // Prevent double processing using ref
+      if (hasProcessedParams.current) return;
+      hasProcessedParams.current = true;
 
-    if (qrCode && secretParam) {
-      // NFC tap detected (has secret token)
-      const detectedMethod = (method === 'qr' || method === 'nfc') ? method : 'nfc';
+      const qrCode = searchParams.get('qr_code');
+      const secretParam = searchParams.get('secret');
+      const method = searchParams.get('method'); // 'nfc' or 'qr'
 
-      setBeneficiaryQrCode(qrCode);
-      setSecret(secretParam);
-      setVerificationMethod(detectedMethod);
-      setTapTimestamp(new Date().toISOString());
+      if (qrCode && secretParam) {
+        // NFC tap detected (has secret token)
+        const detectedMethod = (method === 'qr' || method === 'nfc') ? method : 'nfc';
 
-      // Store in sessionStorage for validation
-      sessionStorage.setItem('card_tap_time', new Date().toISOString());
-      sessionStorage.setItem('nfc_qr_code', qrCode);
-      sessionStorage.setItem('verification_method', detectedMethod);
+        setBeneficiaryQrCode(qrCode);
+        setSecret(secretParam);
+        setVerificationMethod(detectedMethod);
+        setTapTimestamp(new Date().toISOString());
 
-      // Clean the URL immediately to hide the secret
-      window.history.replaceState({}, '', '/checkin');
+        // Store in sessionStorage for validation
+        sessionStorage.setItem('card_tap_time', new Date().toISOString());
+        sessionStorage.setItem('nfc_qr_code', qrCode);
+        sessionStorage.setItem('verification_method', detectedMethod);
 
-      // Request challenge token from server
-      requestChallengeToken(qrCode, secretParam, detectedMethod);
-    } else if (qrCode && !secretParam) {
-      // QR code scan detected (no secret) - geolocation is MANDATORY
-      setBeneficiaryQrCode(qrCode);
-      setVerificationMethod('qr');
-      setValidated(true); // Allow form to load, but geolocation required
-      setTapTimestamp(new Date().toISOString());
+        // Clean the URL immediately to hide the secret
+        window.history.replaceState({}, '', '/checkin');
 
-      // Store in sessionStorage
-      sessionStorage.setItem('card_tap_time', new Date().toISOString());
-      sessionStorage.setItem('nfc_qr_code', qrCode);
-      sessionStorage.setItem('verification_method', 'qr');
+        // Request challenge token from server
+        requestChallengeToken(qrCode, secretParam, detectedMethod);
+      } else if (qrCode && !secretParam) {
+        // QR code scan detected (no secret) - geolocation is MANDATORY
+        setBeneficiaryQrCode(qrCode);
+        setVerificationMethod('qr');
+        setValidated(true); // Allow form to load, but geolocation required
+        setTapTimestamp(new Date().toISOString());
 
-      // Clean URL
-      window.history.replaceState({}, '', '/checkin');
-    } else {
-      // No parameters - check if there's a recent tap in session
-      const recentTap = sessionStorage.getItem('card_tap_time');
-      const storedQrCode = sessionStorage.getItem('nfc_qr_code');
-      const storedMethod = sessionStorage.getItem('verification_method') as 'nfc' | 'qr';
+        // Store in sessionStorage
+        sessionStorage.setItem('card_tap_time', new Date().toISOString());
+        sessionStorage.setItem('nfc_qr_code', qrCode);
+        sessionStorage.setItem('verification_method', 'qr');
 
-      if (!recentTap || !storedQrCode) {
-        // No valid tap, block the form
-        setBlocked(true);
-        setLoading(false);
-        return;
+        // Clean URL
+        window.history.replaceState({}, '', '/checkin');
+      } else {
+        // No parameters - check if there's a recent tap in session
+        const recentTap = sessionStorage.getItem('card_tap_time');
+        const storedQrCode = sessionStorage.getItem('nfc_qr_code');
+        const storedMethod = sessionStorage.getItem('verification_method') as 'nfc' | 'qr';
+
+        if (!recentTap || !storedQrCode) {
+          // No valid tap, block the form
+          setBlocked(true);
+          setLoading(false);
+          return;
+        }
+
+        // Check if tap is still valid (within 15 minutes)
+        const tapTime = new Date(recentTap).getTime();
+        const now = Date.now();
+        const minutesElapsed = (now - tapTime) / 1000 / 60;
+
+        if (minutesElapsed > 15) {
+          // Tap expired
+          setBlocked(true);
+          sessionStorage.removeItem('card_tap_time');
+          sessionStorage.removeItem('nfc_qr_code');
+          sessionStorage.removeItem('verification_method');
+          setLoading(false);
+          return;
+        }
+
+        // Valid session exists but secret already cleaned
+        setBeneficiaryQrCode(storedQrCode);
+        setVerificationMethod(storedMethod || 'nfc');
       }
+    };
 
-      // Check if tap is still valid (within 15 minutes)
-      const tapTime = new Date(recentTap).getTime();
-      const now = Date.now();
-      const minutesElapsed = (now - tapTime) / 1000 / 60;
-
-      if (minutesElapsed > 15) {
-        // Tap expired
-        setBlocked(true);
-        sessionStorage.removeItem('card_tap_time');
-        sessionStorage.removeItem('nfc_qr_code');
-        sessionStorage.removeItem('verification_method');
-        setLoading(false);
-        return;
-      }
-
-      // Valid session exists but secret already cleaned
-      setBeneficiaryQrCode(storedQrCode);
-      setVerificationMethod(storedMethod || 'nfc');
-    }
+    processParams();
   }, [searchParams]);
 
   const requestChallengeToken = async (qrCode: string, secret: string, method: 'nfc' | 'qr') => {
@@ -149,11 +158,21 @@ function CheckInContent() {
   };
 
   useEffect(() => {
-    if (beneficiaryQrCode && !blocked) {
-      loadElderlyData();
-      // Don't auto-request location for NFC (optional)
-      // Location is only mandatory for QR code method
-    }
+    let isMounted = true;
+
+    const loadData = async () => {
+      if (beneficiaryQrCode && !blocked && isMounted) {
+        await loadElderlyData();
+        // Don't auto-request location for NFC (optional)
+        // Location is only mandatory for QR code method
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [beneficiaryQrCode, blocked]);
 
   // Show location modal for QR method if location not available
@@ -165,9 +184,19 @@ function CheckInContent() {
 
   // Load caregiver names after elderly data is loaded
   useEffect(() => {
-    if (elderly?.id) {
-      loadCaregiverNames();
-    }
+    let isMounted = true;
+
+    const loadNames = async () => {
+      if (elderly?.id && isMounted) {
+        await loadCaregiverNames();
+      }
+    };
+
+    loadNames();
+
+    return () => {
+      isMounted = false;
+    };
   }, [elderly?.id]);
 
   const loadElderlyData = async () => {
