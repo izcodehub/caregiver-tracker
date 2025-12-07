@@ -893,9 +893,9 @@ export default function DashboardPage() {
 
         {/* Info Tab */}
         {activeTab === 'info' && (
-          <div className="grid lg:grid-cols-2 gap-6 mb-6">
+          <div className="grid lg:grid-cols-2 gap-6 mb-6 w-full overflow-hidden">
             {/* QR Code Section */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full overflow-hidden">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">QR Code</h2>
               <div className="flex flex-col items-center">
                 <QRCodeGenerator
@@ -909,19 +909,19 @@ export default function DashboardPage() {
             </div>
 
             {/* Beneficiary Information */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full overflow-hidden">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Beneficiary Information</h2>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
+              <div className="space-y-3 w-full">
+                <div className="flex items-start gap-3 w-full">
                   <User className="text-blue-600 mt-1 flex-shrink-0" size={20} />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="text-sm text-gray-600">Name</div>
                     <div className="font-semibold text-gray-900 break-words">{elderly.name}</div>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 w-full">
                   <Home className="text-blue-600 mt-1 flex-shrink-0" size={20} />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="text-sm text-gray-600">Address</div>
                     <div className="font-semibold text-gray-900 break-words">{elderly.address}</div>
                   </div>
@@ -990,7 +990,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Family Members Section */}
-            <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-6">
+            <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full overflow-hidden">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">Additional Family Members</h2>
                 <button
@@ -1004,33 +1004,33 @@ export default function DashboardPage() {
               {familyMembers.filter(m => m.role !== 'primary').length === 0 ? (
                 <p className="text-gray-600 text-center py-8">No additional family members</p>
               ) : (
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-2 gap-4 w-full">
                   {familyMembers.filter(m => m.role !== 'primary').map((member) => (
                     <div
                       key={member.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow w-full overflow-hidden"
                     >
-                      <div className="flex items-start justify-between mb-3 gap-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="flex items-start justify-between mb-3 gap-2 w-full">
+                        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                           <User className="text-blue-600 flex-shrink-0" size={20} />
-                          <div className="font-semibold text-gray-900 break-words">{member.name}</div>
+                          <div className="font-semibold text-gray-900 break-words truncate">{member.name}</div>
                         </div>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full capitalize flex-shrink-0">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full capitalize flex-shrink-0 whitespace-nowrap">
                           {member.role}
                         </span>
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-3 w-full">
                         {member.email && (
-                          <div className="flex items-center gap-2 text-sm min-w-0">
-                            <Mail className="text-gray-400 flex-shrink-0" size={16} />
-                            <a href={`mailto:${member.email}`} className="text-blue-600 hover:underline break-all">
+                          <div className="flex items-start gap-2 text-sm min-w-0 w-full overflow-hidden">
+                            <Mail className="text-gray-400 flex-shrink-0 mt-0.5" size={16} />
+                            <a href={`mailto:${member.email}`} className="text-blue-600 hover:underline break-all overflow-wrap-anywhere">
                               {member.email}
                             </a>
                           </div>
                         )}
                         {member.phone && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Phone className="text-gray-400 flex-shrink-0" size={16} />
+                          <div className="flex items-start gap-2 text-sm w-full">
+                            <Phone className="text-gray-400 flex-shrink-0 mt-0.5" size={16} />
                             <a href={`tel:${member.phone}`} className="text-blue-600 hover:underline break-words">
                               {member.phone}
                             </a>

@@ -38,31 +38,32 @@ export default function QRCodeGenerator({ qrCode, elderlyName }: QRCodeGenerator
   };
 
   return (
-    <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-lg shadow-lg">
-      <h3 className="text-xl font-semibold text-gray-800">{elderlyName}</h3>
-      <div className="p-4 bg-white border-4 border-gray-200 rounded-lg">
+    <div className="flex flex-col items-center gap-4 w-full">
+      <h3 className="text-xl font-semibold text-gray-800 text-center">{elderlyName}</h3>
+      <div className="p-2 sm:p-4 bg-white border-2 sm:border-4 border-gray-200 rounded-lg max-w-full">
         <QRCodeSVG
           id="qr-code-svg"
           value={checkInUrl}
-          size={256}
+          size={200}
           level="H"
           includeMargin
+          className="w-full h-auto max-w-[200px] sm:max-w-[256px]"
         />
       </div>
       <a
         href={checkInUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-sm text-blue-600 hover:underline text-center max-w-xs break-all"
+        className="text-xs sm:text-sm text-blue-600 hover:underline text-center break-all px-2 w-full"
       >
         {checkInUrl}
       </a>
       <button
         onClick={downloadQRCode}
-        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
       >
-        <Download size={20} />
-        Download QR Code
+        <Download size={18} />
+        <span className="whitespace-nowrap">Download QR Code</span>
       </button>
     </div>
   );
