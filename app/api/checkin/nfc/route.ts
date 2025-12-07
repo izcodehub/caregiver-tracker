@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
         is_verified: true,
         verification_flags: {
           method: verification_method || 'nfc',
-          secret_validated: true,
+          secret_validated: verification_method === 'nfc', // Only NFC has secret validation
           has_geolocation: latitude && longitude ? true : false,
           geolocation_required: verification_method === 'qr',
           has_photo: photo_url ? true : false,

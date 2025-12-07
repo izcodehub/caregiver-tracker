@@ -397,6 +397,14 @@ function CheckInContent() {
       setTimeout(() => {
         if (videoRef.current && streamRef.current) {
           videoRef.current.srcObject = streamRef.current;
+
+          // Scroll to video preview after it loads
+          setTimeout(() => {
+            videoRef.current?.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+          }, 300);
         }
       }, 100);
     } catch (err) {
@@ -413,10 +421,17 @@ function CheckInContent() {
     canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.drawImage(videoRef.current, 0, 0);
       setPhoto(canvas.toDataURL('image/jpeg'));
     }
     stopCamera();
+
+    // Scroll to photo preview after capture
+    setTimeout(() => {
+      photoPreviewRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }, 100);
   };
 
   const stopCamera = () => {
@@ -838,7 +853,7 @@ function CheckInContent() {
                   )}
 
                   {photo && (
-                    <div className="space-y-3">
+                    <div ref={photoPreviewRef} className="space-y-3">
                       <img src={photo} alt="Captured" className="w-full rounded-lg" />
                       <button
                         type="button"
