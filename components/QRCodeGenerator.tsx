@@ -11,7 +11,7 @@ interface QRCodeGeneratorProps {
 export default function QRCodeGenerator({ qrCode, elderlyName }: QRCodeGeneratorProps) {
   // QR code does NOT include secret token - only the qr_code
   // When no secret is present, geolocation becomes MANDATORY
-  const checkInUrl = `${process.env.NEXT_PUBLIC_APP_URL}/checkin?qr_code=${qrCode}`;
+  const checkInUrl = `${process.env.NEXT_PUBLIC_APP_URL}/checkin?qr_code=${qrCode}&method=qr`;
 
   const downloadQRCode = () => {
     const svg = document.getElementById('qr-code-svg');

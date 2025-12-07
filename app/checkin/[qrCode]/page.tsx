@@ -393,6 +393,7 @@ export default function CheckInPage() {
           latitude: location?.lat,
           longitude: location?.lng,
           is_training: action === 'check-in' ? isTraining : false, // Only apply training flag to check-ins
+          verification_method: 'qr', // This page is accessed via QR code scan
         });
 
       if (insertError) throw insertError;

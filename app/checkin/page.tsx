@@ -194,26 +194,33 @@ function CheckInContent() {
 
   const checkActiveCaregivers = async (beneficiaryId: string) => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-
+      // Get all check-ins/outs (not just today) to determine who's currently active
       const { data: checkIns, error } = await supabase
         .from('check_in_outs')
         .select('*')
         .eq('beneficiary_id', beneficiaryId)
-        .gte('timestamp', `${today}T00:00:00`)
-        .lte('timestamp', `${today}T23:59:59`)
         .order('timestamp', { ascending: true });
 
       if (error) throw error;
 
-      // Determine who is currently checked in
+      console.log('All check-ins/outs:', checkIns);
+
+      // Determine who is currently checked in (looking at ALL history, not just today)
       const activeMap = new Map<string, boolean>();
 
-      checkIns.forEach(ci => {
-        if (ci.action === 'check-in') {
-          activeMap.set(ci.caregiver_name, true);
-        } else if (ci.action === 'check-out') {
-          activeMap.set(ci.caregiver_name, false);
+      checkIns?.forEach(ci => {
+        const name = ci.caregiver_name;
+        const action = ci.action;
+        console.log(`Processing: "${name}" - "${action}" at ${ci.timestamp}`);
+
+        if (action === 'check-in') {
+          activeMap.set(name, true);
+          console.log(`  ✓ Set "${name}" to ACTIVE`);
+        } else if (action === 'check-out') {
+          activeMap.set(name, false);
+          console.log(`  ✗ Set "${name}" to INACTIVE`);
+        } else {
+          console.log(`  ? Unknown action: "${action}"`);
         }
       });
 
@@ -221,6 +228,9 @@ function CheckInContent() {
       const active = Array.from(activeMap.entries())
         .filter(([_, isActive]) => isActive)
         .map(([name, _]) => name);
+
+      console.log('Active caregivers map:', Array.from(activeMap.entries()));
+      console.log('Currently active:', active);
 
       setActiveCaregivers(active);
 
@@ -381,10 +391,14 @@ function CheckInContent() {
         video: { facingMode: 'user' }
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
       setCameraActive(true);
+
+      // Wait for next render cycle to ensure video element exists
+      setTimeout(() => {
+        if (videoRef.current && streamRef.current) {
+          videoRef.current.srcObject = streamRef.current;
+        }
+      }, 100);
     } catch (err) {
       console.error('Camera error:', err);
       setError(t('checkIn.cameraError'));
@@ -458,6 +472,7 @@ function CheckInContent() {
       }
 
       // Submit with validation
+      console.log('Submitting check-in with verification method:', verificationMethod);
       const response = await fetch('/api/checkin/nfc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -581,7 +596,11 @@ function CheckInContent() {
                     <button
                       type="button"
                       onClick={() => setShowLocationHelp(true)}
-                      className="text-xs text-orange-600 flex items-center gap-1 hover:text-orange-700 hover:underline cursor-pointer"
+                      className={`text-xs flex items-center gap-1 hover:underline cursor-pointer ${
+                        location
+                          ? 'text-green-600 hover:text-green-700'
+                          : 'text-orange-600 hover:text-orange-700'
+                      }`}
                     >
                       <MapPin size={12} />
                       {location
@@ -657,9 +676,10 @@ function CheckInContent() {
                   {/* Active caregivers optgroup */}
                   {activeCaregivers.length > 0 && (
                     <optgroup label={t('checkIn.activeNow')}>
-                      {activeCaregivers.map(name => (
-                        <option key={name} value={name}>✓ {name}</option>
-                      ))}
+                      {activeCaregivers.map(name => {
+                        console.log('Rendering active caregiver:', name);
+                        return <option key={name} value={name}>✓ {name}</option>;
+                      })}
                     </optgroup>
                   )}
 
@@ -667,7 +687,11 @@ function CheckInContent() {
                   {caregiverSuggestions.filter(name => !activeCaregivers.includes(name)).length > 0 && (
                     <optgroup label={t('checkIn.allCaregivers')}>
                       {caregiverSuggestions
-                        .filter(name => !activeCaregivers.includes(name))
+                        .filter(name => {
+                          const isActive = activeCaregivers.includes(name);
+                          console.log(`Caregiver "${name}" - isActive: ${isActive}`);
+                          return !isActive;
+                        })
                         .map(name => (
                           <option key={name} value={name}>{name}</option>
                         ))}
