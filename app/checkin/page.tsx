@@ -398,13 +398,15 @@ function CheckInContent() {
         if (videoRef.current && streamRef.current) {
           videoRef.current.srcObject = streamRef.current;
 
-          // Scroll to video preview after it loads
-          setTimeout(() => {
-            videoRef.current?.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center'
-            });
-          }, 300);
+          // Wait for video to load metadata before scrolling
+          videoRef.current.onloadedmetadata = () => {
+            setTimeout(() => {
+              videoRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+              });
+            }, 100);
+          };
         }
       }, 100);
     } catch (err) {
@@ -421,6 +423,7 @@ function CheckInContent() {
     canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext('2d');
     if (ctx) {
+      ctx.drawImage(videoRef.current, 0, 0);
       setPhoto(canvas.toDataURL('image/jpeg'));
     }
     stopCamera();
