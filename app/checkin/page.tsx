@@ -51,14 +51,21 @@ function CheckInContent() {
   useEffect(() => {
     const processParams = () => {
       // Prevent double processing using ref
-      if (hasProcessedParams.current) return;
+      if (hasProcessedParams.current) {
+        console.log('[CheckIn] Already processed params, skipping');
+        return;
+      }
       hasProcessedParams.current = true;
+      console.log('[CheckIn] Processing URL parameters...');
 
       const qrCode = searchParams.get('qr_code');
       const secretParam = searchParams.get('secret');
       const method = searchParams.get('method'); // 'nfc' or 'qr'
 
+      console.log('[CheckIn] QR Code:', qrCode, 'Secret:', secretParam ? 'exists' : 'none', 'Method:', method);
+
       if (qrCode && secretParam) {
+        console.log('[CheckIn] NFC/Secret flow detected');
         // NFC tap detected (has secret token)
         const detectedMethod = (method === 'qr' || method === 'nfc') ? method : 'nfc';
 
@@ -200,6 +207,7 @@ function CheckInContent() {
   }, [elderly?.id]);
 
   const loadElderlyData = async () => {
+    console.log('[CheckIn] Loading elderly data for QR:', beneficiaryQrCode);
     try {
       const { data, error } = await supabase
         .from('beneficiaries')
@@ -208,15 +216,17 @@ function CheckInContent() {
         .single();
 
       if (error) throw error;
+      console.log('[CheckIn] Elderly data loaded:', data.name);
       setElderly(data);
 
       // Check for active caregivers
       await checkActiveCaregivers(data.id);
     } catch (err) {
-      console.error('Error loading elderly data:', err);
+      console.error('[CheckIn] Error loading elderly data:', err);
       setError(t('checkIn.invalidQR'));
       setBlocked(true);
     } finally {
+      console.log('[CheckIn] Setting loading to false');
       setLoading(false);
     }
   };

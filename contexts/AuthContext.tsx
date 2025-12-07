@@ -28,17 +28,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let hasLoaded = false;
 
     // Check for Supabase session (magic link users)
     const checkSupabaseSession = async () => {
+      console.log('[AuthContext] Starting session check...');
+
+      // Ensure we always set loading to false eventually
+      const timeoutId = setTimeout(() => {
+        console.log('[AuthContext] Session check timeout - forcing loading to false');
+        if (isMounted && !hasLoaded) {
+          setIsLoading(false);
+          hasLoaded = true;
+        }
+      }, 3000); // 3 second max wait
+
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('[AuthContext] Session:', session ? 'exists' : 'none');
 
-        if (!isMounted) return;
+        if (!isMounted) {
+          clearTimeout(timeoutId);
+          return;
+        }
 
         if (session?.user) {
           // User logged in via magic link
           const email = session.user.email!;
+          console.log('[AuthContext] Magic link user:', email);
 
           // Try to find family member
           const { data: familyMember } = await supabase
@@ -47,9 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .eq('email', email)
             .single();
 
-          if (!isMounted) return;
+          if (!isMounted) {
+            clearTimeout(timeoutId);
+            return;
+          }
 
           if (familyMember) {
+            console.log('[AuthContext] Found family member:', familyMember.name);
             const userData = {
               id: familyMember.id,
               email,
@@ -59,7 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             };
             setUser(userData);
             localStorage.setItem('user', JSON.stringify(userData));
+            clearTimeout(timeoutId);
             setIsLoading(false);
+            hasLoaded = true;
             return;
           }
 
@@ -70,9 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .eq('email', email)
             .single();
 
-          if (!isMounted) return;
+          if (!isMounted) {
+            clearTimeout(timeoutId);
+            return;
+          }
 
           if (primaryUser) {
+            console.log('[AuthContext] Found primary user:', primaryUser.name);
             const userData = {
               id: primaryUser.id,
               email: primaryUser.email,
@@ -85,19 +112,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else {
           // No Supabase session, check localStorage for password-based login
+          console.log('[AuthContext] No Supabase session, checking localStorage');
           const storedUser = localStorage.getItem('user');
           if (storedUser && isMounted) {
+            console.log('[AuthContext] Found stored user');
             setUser(JSON.parse(storedUser));
           }
         }
 
-        if (isMounted) {
+        clearTimeout(timeoutId);
+        if (isMounted && !hasLoaded) {
           setIsLoading(false);
+          hasLoaded = true;
+          console.log('[AuthContext] Loading complete');
         }
       } catch (error) {
-        console.error('Error checking session:', error);
-        if (isMounted) {
+        console.error('[AuthContext] Error checking session:', error);
+        clearTimeout(timeoutId);
+        if (isMounted && !hasLoaded) {
           setIsLoading(false);
+          hasLoaded = true;
         }
       }
     };
@@ -106,13 +140,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes - but only handle specific events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[AuthContext] Auth state change:', event);
+
       if (!isMounted) return;
 
       // Only handle these specific events to avoid loops
       if (event === 'SIGNED_IN') {
         // User just signed in, reload their data
+        console.log('[AuthContext] User signed in, reloading data');
+        hasLoaded = false; // Allow reload
         await checkSupabaseSession();
       } else if (event === 'SIGNED_OUT') {
+        console.log('[AuthContext] User signed out');
         setUser(null);
         localStorage.removeItem('user');
       }
@@ -120,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
+      console.log('[AuthContext] Cleanup');
       isMounted = false;
       subscription.unsubscribe();
     };
