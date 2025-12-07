@@ -8,6 +8,7 @@ import LanguageToggle from '@/components/LanguageToggle';
 
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [useMagicLink, setUseMagicLink] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -40,6 +41,38 @@ export default function LoginPage() {
 
     if (!loginSuccess) {
       setError(t('auth.invalidCredentials'));
+      setLoading(false);
+    }
+  };
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send magic link');
+      }
+
+      setSuccess(
+        t('language') === 'fr'
+          ? 'Lien magique envoyé ! Vérifiez votre email.'
+          : 'Magic link sent! Check your email.'
+      );
+      setEmail('');
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
       setLoading(false);
     }
   };
@@ -182,64 +215,144 @@ export default function LoginPage() {
 
           {!isSignUp ? (
             // LOGIN FORM
-            <form onSubmit={handleLogin} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('auth.email')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="text-gray-400" size={20} />
-                  </div>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                    placeholder="vous@exemple.com"
-                    required
-                  />
-                </div>
+            <div>
+              {/* Login Method Toggle */}
+              <div className="flex gap-2 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setUseMagicLink(false)}
+                  className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-colors ${
+                    !useMagicLink
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {t('language') === 'fr' ? 'Mot de passe' : 'Password'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUseMagicLink(true)}
+                  className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-colors ${
+                    useMagicLink
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {t('language') === 'fr' ? 'Lien magique' : 'Magic Link'}
+                </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('auth.password')}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="text-gray-400" size={20} />
+              {!useMagicLink ? (
+                // PASSWORD LOGIN
+                <form onSubmit={handleLogin} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('auth.email')}
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="text-gray-400" size={20} />
+                      </div>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        placeholder="vous@exemple.com"
+                        required
+                      />
+                    </div>
                   </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-colors ${
-                  loading
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="animate-spin" size={20} />
-                    {t('auth.loggingIn') || 'Signing in...'}
-                  </span>
-                ) : (
-                  t('auth.loginButton')
-                )}
-              </button>
-            </form>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('auth.password')}
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="text-gray-400" size={20} />
+                      </div>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-colors ${
+                      loading
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="animate-spin" size={20} />
+                        {t('auth.loggingIn') || 'Signing in...'}
+                      </span>
+                    ) : (
+                      t('auth.loginButton')
+                    )}
+                  </button>
+                </form>
+              ) : (
+                // MAGIC LINK LOGIN
+                <form onSubmit={handleMagicLink} className="space-y-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-blue-800">
+                      {t('language') === 'fr'
+                        ? 'Entrez votre email et nous vous enverrons un lien de connexion sécurisé. Parfait pour les membres de la famille !'
+                        : 'Enter your email and we\'ll send you a secure login link. Perfect for family members!'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('auth.email')}
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="text-gray-400" size={20} />
+                      </div>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                        placeholder="vous@exemple.com"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-colors ${
+                      loading
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="animate-spin" size={20} />
+                        {t('language') === 'fr' ? 'Envoi...' : 'Sending...'}
+                      </span>
+                    ) : (
+                      t('language') === 'fr' ? 'Envoyer le lien magique' : 'Send Magic Link'
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
           ) : (
             // SIGNUP FORM
             <form onSubmit={handleSignUp} className="space-y-4">

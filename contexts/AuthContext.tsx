@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 type User = {
   id: string;
@@ -26,12 +27,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is logged in (from localStorage)
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Check for Supabase session (magic link users)
+    const checkSupabaseSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        // User logged in via magic link
+        const email = session.user.email!;
+        const metadata = session.user.user_metadata;
+
+        // Try to find family member
+        const { data: familyMember } = await supabase
+          .from('family_members')
+          .select('id, name, beneficiary_id')
+          .eq('email', email)
+          .single();
+
+        if (familyMember) {
+          const userData = {
+            id: familyMember.id,
+            email,
+            role: 'family' as const,
+            name: familyMember.name,
+            beneficiary_id: familyMember.beneficiary_id
+          };
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+          setIsLoading(false);
+          return;
+        }
+
+        // Try to find primary contact
+        const { data: primaryUser } = await supabase
+          .from('users')
+          .select('id, email, role, name, beneficiary_id')
+          .eq('email', email)
+          .single();
+
+        if (primaryUser) {
+          const userData = {
+            id: primaryUser.id,
+            email: primaryUser.email,
+            role: primaryUser.role as 'admin' | 'family',
+            name: primaryUser.name,
+            beneficiary_id: primaryUser.beneficiary_id
+          };
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+      } else {
+        // No Supabase session, check localStorage for password-based login
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      }
+
+      setIsLoading(false);
+    };
+
+    checkSupabaseSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        await checkSupabaseSession();
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        localStorage.removeItem('user');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -65,7 +134,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Sign out from Supabase if logged in via magic link
+    await supabase.auth.signOut();
+
     setUser(null);
     localStorage.removeItem('user');
     router.push('/login');
