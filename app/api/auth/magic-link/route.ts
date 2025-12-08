@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       const { error: magicLinkError } = await supabaseAdmin.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${userData.beneficiary_id}`,
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
         }
       });
 
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     const { error: magicLinkError } = await supabaseAdmin.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${familyMember.beneficiary_id}`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
       }
     });
 

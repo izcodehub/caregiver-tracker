@@ -44,13 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }, 5000); // 5 second max wait (increased for Android)
 
       try {
-        // First, check if there's a hash in the URL (magic link callback)
-        if (typeof window !== 'undefined' && window.location.hash) {
-          console.log('[AuthContext] Detected URL hash, waiting for Supabase to process...');
-          // Give Supabase time to process the URL hash
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
         const { data: { session } } = await supabase.auth.getSession();
         console.log('[AuthContext] Session:', session ? 'exists' : 'none');
 
