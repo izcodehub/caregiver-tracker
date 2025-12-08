@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes - but only handle specific events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[AuthContext] Auth state change:', event);
+      console.log('[AuthContext] Auth state change:', event, 'Session exists:', !!session);
 
       if (!isMounted) return;
 
@@ -150,12 +150,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('[AuthContext] User signed in, reloading data');
         hasLoaded = false; // Allow reload
         await checkSupabaseSession();
-      } else if (event === 'SIGNED_OUT') {
-        console.log('[AuthContext] User signed out');
+      } else if (event === 'SIGNED_OUT' && !session) {
+        // Only handle sign out if there's truly no session
+        // This prevents clearing user data during magic link flow
+        console.log('[AuthContext] User signed out (no session)');
         setUser(null);
         localStorage.removeItem('user');
       }
-      // Ignore other events like TOKEN_REFRESHED, USER_UPDATED to prevent loops
+      // Ignore other events like TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION to prevent loops
     });
 
     return () => {
