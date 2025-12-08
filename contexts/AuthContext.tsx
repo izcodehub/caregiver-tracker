@@ -41,9 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsLoading(false);
           hasLoaded = true;
         }
-      }, 3000); // 3 second max wait
+      }, 5000); // 5 second max wait (increased for Android)
 
       try {
+        // First, check if there's a hash in the URL (magic link callback)
+        if (typeof window !== 'undefined' && window.location.hash) {
+          console.log('[AuthContext] Detected URL hash, waiting for Supabase to process...');
+          // Give Supabase time to process the URL hash
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
         const { data: { session } } = await supabase.auth.getSession();
         console.log('[AuthContext] Session:', session ? 'exists' : 'none');
 
@@ -138,26 +145,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkSupabaseSession();
 
-    // Listen for auth changes - but only handle specific events
+    // Listen for auth changes - handle all relevant events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('[AuthContext] Auth state change:', event, 'Session exists:', !!session);
 
       if (!isMounted) return;
 
-      // Only handle these specific events to avoid loops
-      if (event === 'SIGNED_IN') {
-        // User just signed in, reload their data
-        console.log('[AuthContext] User signed in, reloading data');
-        hasLoaded = false; // Allow reload
-        await checkSupabaseSession();
-      } else if (event === 'SIGNED_OUT' && !session) {
-        // Only handle sign out if there's truly no session
-        // This prevents clearing user data during magic link flow
-        console.log('[AuthContext] User signed out (no session)');
+      // Handle different auth events
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        // User signed in or initial session loaded
+        if (session) {
+          console.log('[AuthContext] Session detected, reloading user data');
+          hasLoaded = false; // Allow reload
+          await checkSupabaseSession();
+        } else if (event === 'INITIAL_SESSION') {
+          // Initial session but no session found, check localStorage
+          console.log('[AuthContext] No session in INITIAL_SESSION, checking localStorage');
+          const storedUser = localStorage.getItem('user');
+          if (storedUser && isMounted) {
+            setUser(JSON.parse(storedUser));
+          }
+          if (isMounted && !hasLoaded) {
+            setIsLoading(false);
+            hasLoaded = true;
+          }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        // Only clear data on explicit sign out
+        console.log('[AuthContext] User signed out');
         setUser(null);
         localStorage.removeItem('user');
       }
-      // Ignore other events like TOKEN_REFRESHED, USER_UPDATED, INITIAL_SESSION to prevent loops
+      // TOKEN_REFRESHED and USER_UPDATED are ignored to prevent loops
     });
 
     return () => {
