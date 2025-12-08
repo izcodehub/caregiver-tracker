@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Loader2, Lock, Mail, User, MapPin, DollarSign, Plus, Trash2, Euro, Phone } from 'lucide-react';
 import LanguageToggle from '@/components/LanguageToggle';
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(false);
   const [useMagicLink, setUseMagicLink] = useState(false);
   const [email, setEmail] = useState('');
@@ -31,6 +33,39 @@ export default function LoginPage() {
 
   const { login } = useAuth();
   const { t } = useLanguage();
+
+  // Check for errors in URL
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      switch (errorParam) {
+        case 'link_expired':
+          setError(t('language') === 'fr'
+            ? 'Le lien magique a expiré. Veuillez en demander un nouveau.'
+            : 'Magic link expired. Please request a new one.');
+          break;
+        case 'auth_failed':
+          setError(t('language') === 'fr'
+            ? 'Échec de l\'authentification. Veuillez réessayer.'
+            : 'Authentication failed. Please try again.');
+          break;
+        case 'no_session':
+          setError(t('language') === 'fr'
+            ? 'Aucune session trouvée. Veuillez vous reconnecter.'
+            : 'No session found. Please log in again.');
+          break;
+        case 'user_not_found':
+          setError(t('language') === 'fr'
+            ? 'Utilisateur non trouvé. Veuillez contacter l\'administrateur.'
+            : 'User not found. Please contact administrator.');
+          break;
+        default:
+          setError(t('language') === 'fr'
+            ? 'Une erreur s\'est produite.'
+            : 'An error occurred.');
+      }
+    }
+  }, [searchParams, t]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -637,5 +672,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

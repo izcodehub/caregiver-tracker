@@ -13,6 +13,24 @@ export default function AuthCallbackPage() {
       console.log('[AuthCallback] Processing auth callback...');
 
       try {
+        // Check for errors in URL hash
+        if (typeof window !== 'undefined' && window.location.hash) {
+          const hash = window.location.hash.substring(1);
+          const params = new URLSearchParams(hash);
+          const error = params.get('error');
+          const errorDescription = params.get('error_description');
+
+          if (error) {
+            console.error('[AuthCallback] Error in URL:', error, errorDescription);
+            if (error === 'access_denied' && errorDescription?.includes('expired')) {
+              router.push('/login?error=link_expired');
+            } else {
+              router.push('/login?error=auth_failed');
+            }
+            return;
+          }
+        }
+
         // Get the session from the URL hash
         const { data: { session }, error } = await supabase.auth.getSession();
 
@@ -24,7 +42,7 @@ export default function AuthCallbackPage() {
 
         if (!session) {
           console.log('[AuthCallback] No session found, redirecting to login');
-          router.push('/login');
+          router.push('/login?error=no_session');
           return;
         }
 
