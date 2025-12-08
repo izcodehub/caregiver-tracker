@@ -209,11 +209,11 @@ function CheckInContent() {
   const loadElderlyData = async () => {
     console.log('[CheckIn] Loading elderly data for QR:', beneficiaryQrCode);
 
-    // Emergency timeout - force loading to stop after 3 seconds
+    // Emergency timeout - force loading to stop after 5 seconds (increased for Android)
     const emergencyTimeout = setTimeout(() => {
       console.log('[CheckIn] EMERGENCY TIMEOUT - forcing loading to false');
       setLoading(false);
-    }, 3000);
+    }, 5000);
 
     try {
       const { data, error } = await supabase
@@ -297,8 +297,12 @@ function CheckInContent() {
   };
 
   const loadCaregiverNames = async () => {
-    if (!elderly?.id) return;
+    if (!elderly?.id) {
+      console.log('[CheckIn] Skipping caregiver load - no elderly ID');
+      return;
+    }
 
+    console.log('[CheckIn] Loading caregiver names for beneficiary:', elderly.id);
     try {
       const { data, error} = await supabase
         .from('caregivers')
@@ -310,9 +314,10 @@ function CheckInContent() {
       if (error) throw error;
 
       const names = data.map(c => c.name);
+      console.log('[CheckIn] Loaded caregiver names:', names);
       setCaregiverSuggestions(names);
     } catch (err) {
-      console.error('Error loading caregiver names:', err);
+      console.error('[CheckIn] Error loading caregiver names:', err);
     }
   };
 
