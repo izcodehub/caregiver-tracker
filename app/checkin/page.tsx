@@ -206,34 +206,55 @@ function CheckInContent() {
     };
   }, [elderly?.id]);
 
-  const loadElderlyData = async () => {
-    console.log('[CheckIn] Loading elderly data for QR:', beneficiaryQrCode);
-
-    // Emergency timeout - force loading to stop after 5 seconds (increased for Android)
-    const emergencyTimeout = setTimeout(() => {
-      console.log('[CheckIn] EMERGENCY TIMEOUT - forcing loading to false');
-      setLoading(false);
-    }, 5000);
+  const loadElderlyData = async (retryCount = 0) => {
+    console.log('[CheckIn] Loading elderly data for QR:', beneficiaryQrCode, 'Retry:', retryCount);
 
     try {
+      // Add timeout to the query with AbortController
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      console.log('[CheckIn] Fetching beneficiary data...');
       const { data, error } = await supabase
         .from('beneficiaries')
         .select('*')
         .eq('qr_code', beneficiaryQrCode)
+        .abortSignal(controller.signal)
         .single();
 
-      if (error) throw error;
+      clearTimeout(timeoutId);
+
+      if (error) {
+        console.error('[CheckIn] Supabase error:', error);
+        throw error;
+      }
+
       console.log('[CheckIn] Elderly data loaded:', data.name);
       setElderly(data);
 
       // Check for active caregivers
+      console.log('[CheckIn] Checking active caregivers...');
       await checkActiveCaregivers(data.id);
-    } catch (err) {
+      console.log('[CheckIn] Active caregivers check complete');
+    } catch (err: any) {
       console.error('[CheckIn] Error loading elderly data:', err);
-      setError(t('checkIn.invalidQR'));
+
+      // Retry once on timeout or network error
+      if (retryCount === 0 && (err.name === 'AbortError' || err.message?.includes('network'))) {
+        console.log('[CheckIn] Retrying query...');
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        return loadElderlyData(1); // Retry
+      }
+
+      if (err.name === 'AbortError') {
+        setError(t('language') === 'fr'
+          ? 'Délai d\'attente dépassé. Veuillez réessayer.'
+          : 'Request timeout. Please try again.');
+      } else {
+        setError(t('checkIn.invalidQR'));
+      }
       setBlocked(true);
     } finally {
-      clearTimeout(emergencyTimeout);
       console.log('[CheckIn] Setting loading to false');
       setLoading(false);
     }
