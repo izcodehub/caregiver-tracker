@@ -208,6 +208,13 @@ function CheckInContent() {
 
   const loadElderlyData = async () => {
     console.log('[CheckIn] Loading elderly data for QR:', beneficiaryQrCode);
+
+    // Emergency timeout - force loading to stop after 3 seconds
+    const emergencyTimeout = setTimeout(() => {
+      console.log('[CheckIn] EMERGENCY TIMEOUT - forcing loading to false');
+      setLoading(false);
+    }, 3000);
+
     try {
       const { data, error } = await supabase
         .from('beneficiaries')
@@ -226,6 +233,7 @@ function CheckInContent() {
       setError(t('checkIn.invalidQR'));
       setBlocked(true);
     } finally {
+      clearTimeout(emergencyTimeout);
       console.log('[CheckIn] Setting loading to false');
       setLoading(false);
     }

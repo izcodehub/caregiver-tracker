@@ -140,18 +140,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for auth changes - handle all relevant events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[AuthContext] Auth state change:', event, 'Session exists:', !!session);
+      console.log('[AuthContext] Auth state change:', event, 'Session exists:', !!session, 'Has loaded:', hasLoaded);
 
       if (!isMounted) return;
 
       // Handle different auth events
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        // User signed in or initial session loaded
-        if (session) {
-          console.log('[AuthContext] Session detected, reloading user data');
+      if (event === 'SIGNED_IN' && session) {
+        // Only reload if we haven't loaded yet (prevents loops on Android Chrome)
+        if (!hasLoaded) {
+          console.log('[AuthContext] Session detected, loading user data');
           hasLoaded = false; // Allow reload
           await checkSupabaseSession();
-        } else if (event === 'INITIAL_SESSION') {
+        } else {
+          console.log('[AuthContext] Already loaded, ignoring SIGNED_IN event');
+        }
+      } else if (event === 'INITIAL_SESSION') {
+        if (session) {
+          console.log('[AuthContext] Initial session detected, loading user data');
+          hasLoaded = false;
+          await checkSupabaseSession();
+        } else {
           // Initial session but no session found, check localStorage
           console.log('[AuthContext] No session in INITIAL_SESSION, checking localStorage');
           const storedUser = localStorage.getItem('user');
