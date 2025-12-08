@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 type User = {
@@ -25,8 +25,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
+    // Skip auth loading on public pages (check-in doesn't need auth)
+    const publicPages = ['/checkin', '/login', '/'];
+    const isPublicPage = publicPages.some(page => pathname?.startsWith(page));
+
+    if (isPublicPage && pathname !== '/') {
+      console.log('[AuthContext] Public page detected, skipping auth');
+      setIsLoading(false);
+      return;
+    }
+
     let isMounted = true;
     let hasLoaded = false;
 
@@ -185,7 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [pathname]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
