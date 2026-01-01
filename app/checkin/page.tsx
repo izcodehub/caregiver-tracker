@@ -49,6 +49,15 @@ function CheckInContent() {
 
   // Extract NFC/QR parameters from URL and clean up
   useEffect(() => {
+    const qrCode = searchParams.get('qr_code');
+    const secretParam = searchParams.get('secret');
+    const method = searchParams.get('method');
+
+    // Reset processed flag if we have new URL parameters
+    if (qrCode && secretParam) {
+      hasProcessedParams.current = false;
+    }
+
     const processParams = () => {
       // Prevent double processing using ref
       if (hasProcessedParams.current) {
@@ -57,10 +66,6 @@ function CheckInContent() {
       }
       hasProcessedParams.current = true;
       console.log('[CheckIn] Processing URL parameters...');
-
-      const qrCode = searchParams.get('qr_code');
-      const secretParam = searchParams.get('secret');
-      const method = searchParams.get('method'); // 'nfc' or 'qr'
 
       console.log('[CheckIn] QR Code:', qrCode, 'Secret:', secretParam ? 'exists' : 'none', 'Method:', method);
 
