@@ -1,6 +1,9 @@
 /**
  * Timezone utilities for displaying times in beneficiary's local timezone
  */
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 /**
  * Get timezone for a country code
@@ -20,53 +23,57 @@ export function getTimezoneForCountry(country: string | undefined): string {
 }
 
 /**
- * Format a date in the beneficiary's timezone
- * @param date - Date to format
- * @param timezone - IANA timezone (e.g., 'Europe/Paris')
- * @param options - Intl.DateTimeFormat options
+ * Convert a UTC/ISO date string to beneficiary's timezone as a Date object
+ * This is useful for date-fns functions that need a Date object
  */
-export function formatInTimezone(
-  date: Date | string,
-  timezone: string,
-  options?: Intl.DateTimeFormatOptions
-): string {
+export function convertToTimezone(date: Date | string, timezone: string): Date {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return toZonedTime(dateObj, timezone);
+}
 
+/**
+ * Format time as HH:MM in beneficiary's timezone (for notifications)
+ */
+export function formatTimeInTimezone(date: Date | string, timezone: string): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
   return new Intl.DateTimeFormat('fr-FR', {
-    ...options,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
     timeZone: timezone,
   }).format(dateObj);
 }
 
 /**
- * Format time as HH:MM in beneficiary's timezone
+ * Format date with date-fns in beneficiary's timezone
+ * Use this for dashboard displays
  */
-export function formatTimeInTimezone(date: Date | string, timezone: string): string {
-  return formatInTimezone(date, timezone, {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+export function formatInBeneficiaryTimezone(
+  date: Date | string,
+  timezone: string,
+  formatStr: string
+): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return formatInTimeZone(dateObj, timezone, formatStr, { locale: fr });
 }
 
 /**
- * Format date and time in beneficiary's timezone
+ * Format time as HH:MM using date-fns (for dashboard)
  */
-export function formatDateTimeInTimezone(date: Date | string, timezone: string): string {
-  return formatInTimezone(date, timezone, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+export function formatTimeWithDateFns(date: Date | string, timezone: string): string {
+  return formatInBeneficiaryTimezone(date, timezone, 'HH:mm');
 }
 
 /**
- * Get current time in beneficiary's timezone
+ * Format date and time using date-fns (for dashboard)
  */
-export function getCurrentTimeInTimezone(timezone: string): Date {
-  // This returns a Date object, but when formatted it will use the timezone
-  return new Date();
+export function formatDateTimeWithDateFns(date: Date | string, timezone: string): string {
+  return formatInBeneficiaryTimezone(date, timezone, 'dd/MM/yyyy HH:mm');
+}
+
+/**
+ * Format date only using date-fns (for dashboard)
+ */
+export function formatDateWithDateFns(date: Date | string, timezone: string): string {
+  return formatInBeneficiaryTimezone(date, timezone, 'dd/MM/yyyy');
 }

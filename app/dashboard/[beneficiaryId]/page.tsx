@@ -36,6 +36,7 @@ import CaregiverBreakdown from '@/components/CaregiverBreakdown';
 import LanguageToggle from '@/components/LanguageToggle';
 import NotificationPermissionButton from '@/components/NotificationPermissionButton';
 import { createColorMap, type CaregiverColor } from '@/lib/caregiver-colors';
+import { getTimezoneForCountry, formatTimeWithDateFns, formatInBeneficiaryTimezone } from '@/lib/timezone-utils';
 
 type CheckInOut = {
   id: string;
@@ -126,6 +127,9 @@ export default function DashboardPage() {
   const [newMemberPhone, setNewMemberPhone] = useState('');
   const [addingMember, setAddingMember] = useState(false);
   const [caregiverColors, setCaregiverColors] = useState<Map<string, string>>(new Map());
+
+  // Get beneficiary's timezone
+  const timezone = elderly ? getTimezoneForCountry(elderly.country) : 'Europe/Paris';
 
   useEffect(() => {
     loadData();
@@ -330,7 +334,7 @@ export default function DashboardPage() {
   const groupByDate = () => {
     const grouped: { [key: string]: CheckInOut[] } = {};
     checkIns.forEach(ci => {
-      const date = format(new Date(ci.timestamp), 'yyyy-MM-dd');
+      const date = formatInBeneficiaryTimezone(ci.timestamp, timezone, 'yyyy-MM-dd');
       if (!grouped[date]) grouped[date] = [];
       grouped[date].push(ci);
     });
@@ -771,7 +775,7 @@ export default function DashboardPage() {
                               <p className="font-semibold text-gray-800">{pair.checkIn.caregiver_name}</p>
                               <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Clock size={14} />
-                                <span>{format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}</span>
+                                <span>{formatInBeneficiaryTimezone(pair.checkIn.timestamp, timezone, 'HH:mm:ss')}</span>
                                 {pair.checkIn.photo_url && (
                                   <>
                                     <span className="text-gray-400">•</span>
@@ -794,7 +798,7 @@ export default function DashboardPage() {
                                 <p className="font-semibold text-gray-800">{pair.checkOut.caregiver_name}</p>
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
                                   <Clock size={14} />
-                                  <span>{format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}</span>
+                                  <span>{formatInBeneficiaryTimezone(pair.checkOut.timestamp, timezone, 'HH:mm:ss')}</span>
                                   {pair.checkOut.photo_url && (
                                     <>
                                       <span className="text-gray-400">•</span>
@@ -827,7 +831,7 @@ export default function DashboardPage() {
                               <p className="text-lg font-semibold text-gray-800">{pair.checkIn.caregiver_name}</p>
                               <div className="flex items-center gap-2 text-gray-600 mt-1">
                                 <Clock size={16} />
-                                <span className="font-medium">{format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}</span>
+                                <span className="font-medium">{formatInBeneficiaryTimezone(pair.checkIn.timestamp, timezone, 'HH:mm:ss')}</span>
                                 {pair.checkIn.photo_url && (
                                   <>
                                     <span className="text-gray-400">•</span>
@@ -867,7 +871,7 @@ export default function DashboardPage() {
                                 <p className="text-lg font-semibold text-gray-800">{pair.checkOut.caregiver_name}</p>
                                 <div className="flex items-center gap-2 text-gray-600 mt-1">
                                   <Clock size={16} />
-                                  <span className="font-medium">{format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}</span>
+                                  <span className="font-medium">{formatInBeneficiaryTimezone(pair.checkOut.timestamp, timezone, 'HH:mm:ss')}</span>
                                   {pair.checkOut.photo_url && (
                                     <>
                                       <span className="text-gray-400">•</span>
@@ -1231,7 +1235,7 @@ export default function DashboardPage() {
                                           <p className="font-medium text-gray-800 text-sm">{pair.checkIn.caregiver_name}</p>
                                           <div className="flex items-center gap-2 text-xs text-gray-600">
                                             <Clock size={12} />
-                                            <span>{format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}</span>
+                                            <span>{formatInBeneficiaryTimezone(pair.checkIn.timestamp, timezone, 'HH:mm:ss')}</span>
                                             {pair.checkIn.photo_url && (
                                               <>
                                                 <span className="text-gray-400">•</span>
@@ -1259,7 +1263,7 @@ export default function DashboardPage() {
                                             <p className="font-medium text-gray-800 text-sm">{pair.checkOut.caregiver_name}</p>
                                             <div className="flex items-center gap-2 text-xs text-gray-600">
                                               <Clock size={12} />
-                                              <span>{format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}</span>
+                                              <span>{formatInBeneficiaryTimezone(pair.checkOut.timestamp, timezone, 'HH:mm:ss')}</span>
                                               {pair.checkOut.photo_url && (
                                                 <>
                                                   <span className="text-gray-400">•</span>
@@ -1296,7 +1300,7 @@ export default function DashboardPage() {
                                         <p className="font-medium text-gray-800">{pair.checkIn.caregiver_name}</p>
                                         <div className="flex items-center gap-2 text-sm text-gray-600">
                                           <Clock size={14} />
-                                          <span>{format(new Date(pair.checkIn.timestamp), 'HH:mm:ss')}</span>
+                                          <span>{formatInBeneficiaryTimezone(pair.checkIn.timestamp, timezone, 'HH:mm:ss')}</span>
                                           {pair.checkIn.photo_url && (
                                             <>
                                               <span className="text-gray-400">•</span>
@@ -1336,7 +1340,7 @@ export default function DashboardPage() {
                                           <p className="font-medium text-gray-800">{pair.checkOut.caregiver_name}</p>
                                           <div className="flex items-center gap-2 text-sm text-gray-600">
                                             <Clock size={14} />
-                                            <span>{format(new Date(pair.checkOut.timestamp), 'HH:mm:ss')}</span>
+                                            <span>{formatInBeneficiaryTimezone(pair.checkOut.timestamp, timezone, 'HH:mm:ss')}</span>
                                             {pair.checkOut.photo_url && (
                                               <>
                                                 <span className="text-gray-400">•</span>
