@@ -4,6 +4,7 @@
  */
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
+import { getTimezoneForCountry, formatTimeInTimezone } from './timezone-utils';
 
 // VAPID keys should be stored in environment variables
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -117,12 +118,11 @@ export async function sendCheckInNotification(
   caregiverName: string,
   familyMemberIds: string[],
   checkInTime: Date,
-  elderlyCareRecipientName: string
+  elderlyCareRecipientName: string,
+  beneficiaryCountry?: string
 ): Promise<void> {
-  const timeString = checkInTime.toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const timezone = getTimezoneForCountry(beneficiaryCountry);
+  const timeString = formatTimeInTimezone(checkInTime, timezone);
 
   const payload: NotificationPayload = {
     title: `${caregiverName} est arrivée`,
@@ -151,12 +151,11 @@ export async function sendCheckOutNotification(
   caregiverName: string,
   familyMemberIds: string[],
   checkOutTime: Date,
-  elderlyCareRecipientName: string
+  elderlyCareRecipientName: string,
+  beneficiaryCountry?: string
 ): Promise<void> {
-  const timeString = checkOutTime.toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const timezone = getTimezoneForCountry(beneficiaryCountry);
+  const timeString = formatTimeInTimezone(checkOutTime, timezone);
 
   const payload: NotificationPayload = {
     title: `${caregiverName} est partie`,

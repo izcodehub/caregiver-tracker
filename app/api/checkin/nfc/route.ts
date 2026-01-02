@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     // Find beneficiary
     const { data: beneficiary, error: beneficiaryError } = await supabase
       .from('beneficiaries')
-      .select('id, name, nfc_secret')
+      .select('id, name, nfc_secret, country')
       .eq('qr_code', beneficiary_qr_code)
       .single();
 
@@ -192,7 +192,8 @@ export async function POST(request: NextRequest) {
                 caregiver_name.trim(),
                 familyMemberIds,
                 new Date(tap_timestamp),
-                beneficiary.name
+                beneficiary.name,
+                beneficiary.country
               );
               console.log('[CheckIn] Check-in notification sent successfully');
             } else if (action === 'check-out') {
@@ -201,7 +202,8 @@ export async function POST(request: NextRequest) {
                 caregiver_name.trim(),
                 familyMemberIds,
                 new Date(tap_timestamp),
-                beneficiary.name
+                beneficiary.name,
+                beneficiary.country
               );
               console.log('[CheckIn] Check-out notification sent successfully');
             }
