@@ -279,7 +279,7 @@ function LoginContent() {
 
               {!useMagicLink ? (
                 // PASSWORD LOGIN
-                <form onSubmit={handleLogin} className="space-y-6">
+                <form onSubmit={handleLogin} className="space-y-6" autoComplete="on">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t('auth.email')}
@@ -290,6 +290,9 @@ function LoginContent() {
                       </div>
                       <input
                         type="email"
+                        name="email"
+                        id="login-email"
+                        autoComplete="username email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
@@ -309,6 +312,9 @@ function LoginContent() {
                       </div>
                       <input
                         type="password"
+                        name="password"
+                        id="login-password"
+                        autoComplete="current-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
@@ -339,7 +345,7 @@ function LoginContent() {
                 </form>
               ) : (
                 // MAGIC LINK LOGIN
-                <form onSubmit={handleMagicLink} className="space-y-6">
+                <form onSubmit={handleMagicLink} className="space-y-6" autoComplete="on">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                     <p className="text-sm text-blue-800">
                       {t('language') === 'fr'
@@ -358,6 +364,9 @@ function LoginContent() {
                       </div>
                       <input
                         type="email"
+                        name="email"
+                        id="magiclink-email"
+                        autoComplete="username email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
