@@ -180,22 +180,34 @@ export async function POST(request: NextRequest) {
 
         if (notificationEnabledMembers.length > 0) {
           const familyMemberIds = notificationEnabledMembers.map((m) => m.id);
+          console.log('[CheckIn] Sending notifications to family members:', familyMemberIds);
 
-          if (action === 'check-in') {
-            await sendCheckInNotification(
-              caregiver_name.trim(),
-              familyMemberIds,
-              new Date(tap_timestamp),
-              beneficiary.name
-            );
-          } else if (action === 'check-out') {
-            await sendCheckOutNotification(
-              caregiver_name.trim(),
-              familyMemberIds,
-              new Date(tap_timestamp),
-              beneficiary.name
-            );
+          try {
+            if (action === 'check-in') {
+              console.log('[CheckIn] Sending check-in notification for:', caregiver_name.trim());
+              await sendCheckInNotification(
+                caregiver_name.trim(),
+                familyMemberIds,
+                new Date(tap_timestamp),
+                beneficiary.name
+              );
+              console.log('[CheckIn] Check-in notification sent successfully');
+            } else if (action === 'check-out') {
+              console.log('[CheckIn] Sending check-out notification for:', caregiver_name.trim());
+              await sendCheckOutNotification(
+                caregiver_name.trim(),
+                familyMemberIds,
+                new Date(tap_timestamp),
+                beneficiary.name
+              );
+              console.log('[CheckIn] Check-out notification sent successfully');
+            }
+          } catch (notifError) {
+            console.error('[CheckIn] Error sending notification:', notifError);
+            // Don't fail the check-in if notification fails
           }
+        } else {
+          console.log('[CheckIn] No family members with notifications enabled');
         }
       }
     } catch (notificationError) {

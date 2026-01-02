@@ -9,6 +9,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true, // Important for magic links
     flowType: 'pkce', // More secure auth flow
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storageKey: 'caregiver-tracker-auth',
   }
 });
 
