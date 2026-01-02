@@ -37,9 +37,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user also exists in family_members table (for notification matching)
+    const { data: familyMember } = await supabase
+      .from('family_members')
+      .select('id')
+      .eq('email', email)
+      .eq('beneficiary_id', user.beneficiary_id)
+      .single();
+
     // Return user data (without password hash)
     const userData = {
-      id: user.id,
+      id: familyMember?.id || user.id, // Use family_member_id if exists, otherwise user_id
+      user_id: user.id, // Keep original user ID for reference
       email: user.email,
       role: user.role,
       name: user.name,

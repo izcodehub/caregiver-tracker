@@ -67,6 +67,7 @@ type FamilyMember = {
   email: string;
   phone?: string;
   role: string;
+  has_push_subscription?: boolean;
 };
 
 type CurrentStatus = {
@@ -158,7 +159,27 @@ export default function DashboardPage() {
         .eq('beneficiary_id', beneficiaryId)
         .order('role');
 
-      setFamilyMembers(familyData || []);
+      // Check subscription status for each family member
+      if (familyData) {
+        const familyWithStatus = await Promise.all(
+          familyData.map(async (member) => {
+            const { data: subscriptions } = await supabase
+              .from('push_subscriptions')
+              .select('id')
+              .eq('family_member_id', member.id)
+              .eq('is_active', true)
+              .limit(1);
+
+            return {
+              ...member,
+              has_push_subscription: (subscriptions && subscriptions.length > 0)
+            };
+          })
+        );
+        setFamilyMembers(familyWithStatus);
+      } else {
+        setFamilyMembers([]);
+      }
     } catch (error) {
       console.error('Error loading family members:', error);
     }
@@ -983,12 +1004,18 @@ export default function DashboardPage() {
                           {user?.id === primaryContact.id ? (
                             <NotificationPermissionButton familyMemberId={primaryContact.id} />
                           ) : (
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm">
                               <div className="flex items-center justify-between">
-                                <span>Push Notifications</span>
-                                <span className="text-xs text-gray-400">
-                                  {primaryContact.email} must enable on their device
-                                </span>
+                                <span className="text-gray-700">Push Notifications</span>
+                                {primaryContact.has_push_subscription ? (
+                                  <span className="text-xs font-medium text-green-600 flex items-center gap-1">
+                                    <CheckCircle size={14} /> Enabled
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                                    <XCircle size={14} /> Not enabled
+                                  </span>
+                                )}
                               </div>
                             </div>
                           )}
@@ -1051,12 +1078,18 @@ export default function DashboardPage() {
                           {user?.id === member.id ? (
                             <NotificationPermissionButton familyMemberId={member.id} />
                           ) : (
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm">
                               <div className="flex items-center justify-between">
-                                <span>Push Notifications</span>
-                                <span className="text-xs text-gray-400">
-                                  {member.email} must enable on their device
-                                </span>
+                                <span className="text-gray-700">Push Notifications</span>
+                                {member.has_push_subscription ? (
+                                  <span className="text-xs font-medium text-green-600 flex items-center gap-1">
+                                    <CheckCircle size={14} /> Enabled
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                                    <XCircle size={14} /> Not enabled
+                                  </span>
+                                )}
                               </div>
                             </div>
                           )}

@@ -47,14 +47,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // FIRST: Check localStorage for saved user data (fast, works offline)
       const storedUser = localStorage.getItem('user');
+      console.log('[AuthContext] Checking localStorage for user data...');
+      console.log('[AuthContext] localStorage.getItem("user"):', storedUser ? 'found' : 'not found');
+
       if (storedUser) {
         try {
           const userData = JSON.parse(storedUser);
-          console.log('[AuthContext] Found stored user data:', userData.email);
+          console.log('[AuthContext] Found stored user data:', userData);
           setUser(userData);
           setIsLoading(false);
           hasLoaded = true;
-          console.log('[AuthContext] Loaded from localStorage (offline-safe)');
+          console.log('[AuthContext] ✅ Loaded from localStorage (offline-safe)');
 
           // Continue to verify session in background (don't await)
           supabase.auth.getSession().then(({ data: { session } }) => {
