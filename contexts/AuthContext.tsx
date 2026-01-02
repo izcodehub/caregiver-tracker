@@ -45,6 +45,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkSupabaseSession = async () => {
       console.log('[AuthContext] Starting session check...');
 
+      // FIRST: Check localStorage for saved user data (fast, works offline)
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          console.log('[AuthContext] Found stored user data:', userData.email);
+          setUser(userData);
+          setIsLoading(false);
+          hasLoaded = true;
+          console.log('[AuthContext] Loaded from localStorage (offline-safe)');
+
+          // Continue to verify session in background (don't await)
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session) {
+              // Session expired but localStorage still has data - clear it
+              console.log('[AuthContext] Session expired, clearing localStorage');
+              localStorage.removeItem('user');
+              if (isMounted) {
+                setUser(null);
+              }
+            }
+          }).catch(err => {
+            console.log('[AuthContext] Background session check failed (offline?):', err.message);
+            // Keep user logged in from localStorage even if network fails
+          });
+
+          return;
+        } catch (err) {
+          console.error('[AuthContext] Error parsing stored user:', err);
+          localStorage.removeItem('user');
+        }
+      }
+
+      // SECOND: No localStorage data - check Supabase session
+      console.log('[AuthContext] No localStorage data, checking Supabase session');
+
       // Ensure we always set loading to false eventually
       const timeoutId = setTimeout(() => {
         console.log('[AuthContext] Session check timeout - forcing loading to false');

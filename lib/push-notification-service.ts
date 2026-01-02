@@ -120,7 +120,7 @@ export async function sendCheckInNotification(
   elderlyCareRecipientName: string
 ): Promise<void> {
   const payload: NotificationPayload = {
-    title: `${caregiverName} checked in`,
+    title: `${caregiverName} arrived`,
     body: `${caregiverName} has checked in with ${elderlyCareRecipientName} at ${checkInTime.toLocaleTimeString()}`,
     icon: '/icons/icon-192x192.png',
     badge: '/icons/badge-72x72.png',
@@ -149,7 +149,7 @@ export async function sendCheckOutNotification(
   elderlyCareRecipientName: string
 ): Promise<void> {
   const payload: NotificationPayload = {
-    title: `${caregiverName} checked out`,
+    title: `${caregiverName} left`,
     body: `${caregiverName} has checked out from ${elderlyCareRecipientName} at ${checkOutTime.toLocaleTimeString()}`,
     icon: '/icons/icon-192x192.png',
     badge: '/icons/badge-72x72.png',
