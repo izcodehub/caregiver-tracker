@@ -672,6 +672,7 @@ export default function DashboardPage() {
               selectedMonth={selectedMonth}
               checkIns={checkIns}
               caregiverColors={caregiverColors}
+              timezone={timezone}
               onDayClick={(date, dayCheckIns) => {
                 setSelectedDayView({ date, checkIns: dayCheckIns });
               }}

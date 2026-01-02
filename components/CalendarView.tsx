@@ -1,6 +1,7 @@
 'use client';
 
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { useState, useEffect } from 'react';
 import { getHolidayType } from '@/lib/holidays';
 import { PartyPopper } from 'lucide-react';
@@ -24,6 +25,7 @@ type CalendarViewProps = {
   checkIns: CheckInOut[];
   caregiverColors: Map<string, string>;
   onDayClick: (date: Date, dayCheckIns: CheckInOut[]) => void;
+  timezone: string;
 };
 
 // Component for showing running time for active check-ins
@@ -53,7 +55,7 @@ function RunningTimer({ checkInTime }: { checkInTime: Date }) {
   );
 }
 
-export default function CalendarView({ selectedMonth, checkIns, caregiverColors, onDayClick }: CalendarViewProps) {
+export default function CalendarView({ selectedMonth, checkIns, caregiverColors, onDayClick, timezone }: CalendarViewProps) {
   const { language } = useLanguage();
 
   // Get all unique caregiver names for color fallback
@@ -70,9 +72,11 @@ export default function CalendarView({ selectedMonth, checkIns, caregiverColors,
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const getDayCheckIns = (date: Date) => {
-    return checkIns.filter(ci =>
-      isSameDay(new Date(ci.timestamp), date)
-    );
+    return checkIns.filter(ci => {
+      // Convert timestamp to beneficiary's timezone before comparing dates
+      const ciDateInTz = toZonedTime(new Date(ci.timestamp), timezone);
+      return isSameDay(ciDateInTz, date);
+    });
   };
 
   const getDayStatus = (date: Date, dayCheckIns: CheckInOut[]) => {
@@ -121,7 +125,7 @@ export default function CalendarView({ selectedMonth, checkIns, caregiverColors,
 
     const times: string[] = [];
     for (const ci of sorted) {
-      const time = format(new Date(ci.timestamp), 'HH:mm');
+      const time = formatInTimeZone(new Date(ci.timestamp), timezone, 'HH:mm');
       const icon = ci.action === 'check-in' ? '→' : '←';
       times.push(`${icon}${time}`);
     }
