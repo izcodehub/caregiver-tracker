@@ -980,7 +980,18 @@ export default function DashboardPage() {
                           </div>
                         )}
                         <div className="pt-2 border-t border-gray-100">
-                          <NotificationPermissionButton familyMemberId={primaryContact.id} />
+                          {user?.id === primaryContact.id ? (
+                            <NotificationPermissionButton familyMemberId={primaryContact.id} />
+                          ) : (
+                            <div className="text-sm text-gray-500">
+                              <div className="flex items-center justify-between">
+                                <span>Push Notifications</span>
+                                <span className="text-xs text-gray-400">
+                                  {primaryContact.email} must enable on their device
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1037,7 +1048,18 @@ export default function DashboardPage() {
                           </div>
                         )}
                         <div className="pt-2 border-t border-gray-100">
-                          <NotificationPermissionButton familyMemberId={member.id} />
+                          {user?.id === member.id ? (
+                            <NotificationPermissionButton familyMemberId={member.id} />
+                          ) : (
+                            <div className="text-sm text-gray-500">
+                              <div className="flex items-center justify-between">
+                                <span>Push Notifications</span>
+                                <span className="text-xs text-gray-400">
+                                  {member.email} must enable on their device
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

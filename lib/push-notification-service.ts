@@ -119,9 +119,14 @@ export async function sendCheckInNotification(
   checkInTime: Date,
   elderlyCareRecipientName: string
 ): Promise<void> {
+  const timeString = checkInTime.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
   const payload: NotificationPayload = {
-    title: `${caregiverName} arrived`,
-    body: `${caregiverName} has checked in with ${elderlyCareRecipientName} at ${checkInTime.toLocaleTimeString()}`,
+    title: `${caregiverName} est arrivée`,
+    body: `${caregiverName} est arrivée chez ${elderlyCareRecipientName} à ${timeString}`,
     icon: '/icons/icon-192x192.png',
     badge: '/icons/badge-72x72.png',
     tag: 'check-in',
@@ -148,9 +153,14 @@ export async function sendCheckOutNotification(
   checkOutTime: Date,
   elderlyCareRecipientName: string
 ): Promise<void> {
+  const timeString = checkOutTime.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
   const payload: NotificationPayload = {
-    title: `${caregiverName} left`,
-    body: `${caregiverName} has checked out from ${elderlyCareRecipientName} at ${checkOutTime.toLocaleTimeString()}`,
+    title: `${caregiverName} est partie`,
+    body: `${caregiverName} est partie de chez ${elderlyCareRecipientName} à ${timeString}`,
     icon: '/icons/icon-192x192.png',
     badge: '/icons/badge-72x72.png',
     tag: 'check-out',
