@@ -175,8 +175,11 @@ export async function POST(request: NextRequest) {
       if (familyMembers && familyMembers.length > 0) {
         // Filter family members who have notifications enabled
         const notificationEnabledMembers = familyMembers.filter(
-          (member) => member.notification_preferences?.push_enabled === true
+          (member) => member.notification_preferences?.push === true
         );
+
+        console.log('[CheckIn] Total family members:', familyMembers.length);
+        console.log('[CheckIn] Members with push enabled:', notificationEnabledMembers.length);
 
         if (notificationEnabledMembers.length > 0) {
           const familyMemberIds = notificationEnabledMembers.map((m) => m.id);
