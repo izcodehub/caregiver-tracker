@@ -134,9 +134,8 @@ function CheckInContent() {
         if (minutesElapsed > TIME_WINDOW_MINUTES) {
           // Tap expired - clear session and show full error
           setBlocked(true);
-          setError(language === 'fr'
-            ? 'Veuillez taper la carte du bénéficiaire ou scanner le code QR à nouveau pour commencer la visite.'
-            : 'Please tap the beneficiary\'s card or scan the QR code again to start the visit.'
+          setError(
+            'Veuillez taper la carte du bénéficiaire ou scanner le code QR à nouveau pour commencer la visite. / Please tap the beneficiary\'s card or scan the QR code again to start the visit.'
           );
           sessionStorage.removeItem('card_tap_time');
           sessionStorage.removeItem('nfc_qr_code');
@@ -227,10 +226,7 @@ function CheckInContent() {
         setTimeRemaining(0);
         setBlocked(true);
         setValidated(false);
-        setError(language === 'fr'
-          ? `Délai expiré. Veuillez taper à nouveau la carte.`
-          : `Time expired. Please tap the card again.`
-        );
+        setError('Délai expiré. Veuillez taper à nouveau la carte. / Time expired. Please tap the card again.');
       } else {
         setTimeRemaining(Math.ceil(secondsRemaining));
       }
@@ -620,9 +616,8 @@ function CheckInContent() {
     const minutesElapsed = (now - tapTime) / 1000 / 60;
 
     if (minutesElapsed > TIME_WINDOW_MINUTES) {
-      setError(language === 'fr'
-        ? `Délai expiré. Vous devez soumettre dans les ${TIME_WINDOW_MINUTES} minutes suivant le tap de la carte. Veuillez taper à nouveau la carte.`
-        : `Time expired. You must submit within ${TIME_WINDOW_MINUTES} minutes of tapping the card. Please tap the card again.`
+      setError(
+        `Délai expiré. Vous devez soumettre dans les ${TIME_WINDOW_MINUTES} minutes suivant le tap de la carte. Veuillez taper à nouveau la carte. / Time expired. You must submit within ${TIME_WINDOW_MINUTES} minutes of tapping the card. Please tap the card again.`
       );
       setBlocked(true);
       setValidated(false);
@@ -693,23 +688,28 @@ function CheckInContent() {
             <AlertCircle className="text-red-600" size={40} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            {language === 'fr' ? 'Carte ou code QR requis' : 'Card or QR Code Required'}
+            Carte ou code QR requis
           </h1>
+          <h2 className="text-lg font-semibold text-gray-700 mb-4">
+            Card or QR Code Required
+          </h2>
           {error ? (
             <p className="text-gray-700 mb-2">
               {error}
             </p>
           ) : (
             <>
-              <p className="text-gray-700 mb-2">
-                {language === 'fr'
-                  ? 'Veuillez taper la carte NFC du bénéficiaire ou scanner le code QR pour commencer votre visite.'
-                  : 'Please tap the beneficiary\'s NFC card or scan the QR code to start your visit.'}
+              <p className="text-gray-700 mb-2 font-medium">
+                Veuillez taper la carte NFC du bénéficiaire ou scanner le code QR pour commencer votre visite.
               </p>
-              <p className="text-sm text-gray-500">
-                {language === 'fr'
-                  ? 'Les favoris enregistrés et les liens directs ne sont pas autorisés pour des raisons de sécurité.'
-                  : 'Saved bookmarks and direct links are not allowed for security reasons.'}
+              <p className="text-gray-600 mb-4">
+                Please tap the beneficiary's NFC card or scan the QR code to start your visit.
+              </p>
+              <p className="text-sm text-gray-500 italic">
+                Les favoris enregistrés et les liens directs ne sont pas autorisés pour des raisons de sécurité.
+              </p>
+              <p className="text-sm text-gray-500 italic">
+                Saved bookmarks and direct links are not allowed for security reasons.
               </p>
             </>
           )}
