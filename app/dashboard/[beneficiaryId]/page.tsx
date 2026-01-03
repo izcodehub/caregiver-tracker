@@ -37,7 +37,7 @@ import LanguageToggle from '@/components/LanguageToggle';
 import NotificationPermissionButton from '@/components/NotificationPermissionButton';
 import DailyNoteModal from '@/components/DailyNoteModal';
 import { createColorMap, type CaregiverColor } from '@/lib/caregiver-colors';
-import { getTimezoneForCountry, formatTimeWithDateFns, formatInBeneficiaryTimezone } from '@/lib/timezone-utils';
+import { getTimezoneForCountry, formatTimeWithDateFns, formatInBeneficiaryTimezone, convertToTimezone } from '@/lib/timezone-utils';
 
 type CheckInOut = {
   id: string;
@@ -234,7 +234,7 @@ export default function DashboardPage() {
     setNoteModalOpen(true);
   };
 
-  const handleSaveNote = async (note: string) => {
+  const handleSaveNote = async (data: { note: string; noteType: string }) => {
     if (!selectedNoteDate) return;
 
     const dateStr = format(selectedNoteDate, 'yyyy-MM-dd');
@@ -245,8 +245,8 @@ export default function DashboardPage() {
       body: JSON.stringify({
         beneficiary_id: beneficiaryId,
         date: dateStr,
-        reason: note,
-        note_type: 'general',
+        reason: data.note,
+        note_type: data.noteType,
         created_by: user?.id,
       }),
     });
@@ -417,12 +417,36 @@ export default function DashboardPage() {
 
   const groupByDate = () => {
     const grouped: { [key: string]: CheckInOut[] } = {};
+
+    // Add days with check-ins
     checkIns.forEach(ci => {
       const date = formatInBeneficiaryTimezone(ci.timestamp, timezone, 'yyyy-MM-dd');
       if (!grouped[date]) grouped[date] = [];
       grouped[date].push(ci);
     });
+
+    // Add days with notes but no check-ins
+    dailyNotes.forEach(note => {
+      if (!grouped[note.date]) {
+        grouped[note.date] = [];
+      }
+    });
+
     return grouped;
+  };
+
+  // Helper function to parse a yyyy-MM-dd date string in the beneficiary's timezone
+  const parseDateInTimezone = (dateStr: string): Date => {
+    // Create a date at noon in the beneficiary's timezone to avoid midnight edge cases
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const utcDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    return convertToTimezone(utcDate, timezone);
+  };
+
+  // Helper function to create a Date object from yyyy-MM-dd that won't shift when formatted
+  const createDateFromString = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0);
   };
 
 
@@ -1254,7 +1278,9 @@ export default function DashboardPage() {
                           <div className="flex items-center gap-2">
                             <Calendar size={18} className="text-gray-600" />
                             <span className="font-semibold text-gray-800">
-                              {format(new Date(date), 'EEEE, MMMM d, yyyy')}
+                              {format(parseDateInTimezone(date), 'EEEE, MMMM d, yyyy', {
+                                locale: language === 'fr' ? fr : enUS
+                              })}
                             </span>
                             {hasTraining && (
                               <div className="relative group">
@@ -1291,7 +1317,7 @@ export default function DashboardPage() {
                                 <p className="text-sm text-orange-800">{dayNote.reason}</p>
                               </div>
                               <button
-                                onClick={() => handleAddNote(new Date(date))}
+                                onClick={() => handleAddNote(createDateFromString(date))}
                                 className="text-orange-600 hover:text-orange-700 text-xs underline"
                               >
                                 {language === 'fr' ? 'Modifier' : 'Edit'}
@@ -1602,27 +1628,23 @@ export default function DashboardPage() {
       )}
 
       {/* Daily Note Modal */}
-      {selectedNoteDate && (
-        <DailyNoteModal
-          isOpen={noteModalOpen}
-          onClose={() => setNoteModalOpen(false)}
-          beneficiaryId={beneficiaryId}
-          date={selectedNoteDate}
-          existingNote={
-            dailyNotes.find(
-              (note) => note.date === format(selectedNoteDate, 'yyyy-MM-dd')
-            )?.reason
-          }
-          onSave={handleSaveNote}
-          onDelete={
-            dailyNotes.find(
-              (note) => note.date === format(selectedNoteDate, 'yyyy-MM-dd')
-            )
-              ? handleDeleteNote
-              : undefined
-          }
-        />
-      )}
+      {selectedNoteDate && (() => {
+        const existingNote = dailyNotes.find(
+          (note) => note.date === format(selectedNoteDate, 'yyyy-MM-dd')
+        );
+        return (
+          <DailyNoteModal
+            isOpen={noteModalOpen}
+            onClose={() => setNoteModalOpen(false)}
+            beneficiaryId={beneficiaryId}
+            date={selectedNoteDate}
+            existingNote={existingNote?.reason}
+            existingNoteType={existingNote?.note_type as 'modification' | 'cancellation' | 'special_instruction' | 'general' | undefined}
+            onSave={handleSaveNote}
+            onDelete={existingNote ? handleDeleteNote : undefined}
+          />
+        );
+      })()}
 
     </div>
   );

@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { beneficiary_id, date, note_type, reason, original_time, modified_time, created_by } = body;
+    const { beneficiary_id, date, note_type, reason, created_by } = body;
 
     if (!beneficiary_id || !date || !reason) {
       return NextResponse.json(
@@ -74,8 +74,6 @@ export async function POST(request: NextRequest) {
         .update({
           note_type: note_type || 'general',
           reason: reason.trim(),
-          original_time,
-          modified_time,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
@@ -90,8 +88,6 @@ export async function POST(request: NextRequest) {
           date,
           note_type: note_type || 'general',
           reason: reason.trim(),
-          original_time,
-          modified_time,
           created_by,
         })
         .select()

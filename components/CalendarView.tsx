@@ -365,8 +365,7 @@ export default function CalendarView({ selectedMonth, checkIns, caregiverColors,
               {/* Note indicator badge - top left */}
               {dayNote && (
                 <div
-                  className="absolute -top-1 -left-1 z-10 cursor-pointer hover:scale-110 transition-transform"
-                  title={dayNote.reason}
+                  className="absolute -top-1 -left-1 z-20 cursor-pointer hover:scale-110 transition-transform group/note"
                   onClick={(e) => {
                     e.stopPropagation();
                     onAddNote?.(day);
@@ -374,6 +373,10 @@ export default function CalendarView({ selectedMonth, checkIns, caregiverColors,
                 >
                   <div className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-white shadow-md">
                     <StickyNote size={12} />
+                  </div>
+                  {/* Custom tooltip for note */}
+                  <div className="absolute left-0 top-full mt-1 hidden group-hover/note:block bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap shadow-lg z-30 max-w-[200px] whitespace-normal">
+                    {dayNote.reason}
                   </div>
                 </div>
               )}

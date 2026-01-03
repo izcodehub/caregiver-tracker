@@ -6,13 +6,16 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+type NoteType = 'modification' | 'no-show' | 'late-arrival' | 'cancellation' | 'special_instruction' | 'general';
+
 type DailyNoteModalProps = {
   isOpen: boolean;
   onClose: () => void;
   beneficiaryId: string;
   date: Date;
   existingNote?: string;
-  onSave: (note: string) => Promise<void>;
+  existingNoteType?: NoteType;
+  onSave: (data: { note: string; noteType: NoteType }) => Promise<void>;
   onDelete?: () => Promise<void>;
 };
 
@@ -22,17 +25,20 @@ export default function DailyNoteModal({
   beneficiaryId,
   date,
   existingNote,
+  existingNoteType,
   onSave,
   onDelete,
 }: DailyNoteModalProps) {
   const { language } = useLanguage();
   const [note, setNote] = useState(existingNote || '');
+  const [noteType, setNoteType] = useState<NoteType>(existingNoteType || 'general');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setNote(existingNote || '');
-  }, [existingNote, isOpen]);
+    setNoteType(existingNoteType || 'general');
+  }, [existingNote, existingNoteType, isOpen]);
 
   if (!isOpen) return null;
 
@@ -41,7 +47,7 @@ export default function DailyNoteModal({
 
     setSaving(true);
     try {
-      await onSave(note);
+      await onSave({ note, noteType });
       onClose();
     } catch (error) {
       console.error('Error saving note:', error);
@@ -97,12 +103,42 @@ export default function DailyNoteModal({
 
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
+            {language === 'fr' ? 'Type de note' : 'Note Type'}
+          </label>
+          <select
+            value={noteType}
+            onChange={(e) => setNoteType(e.target.value as NoteType)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900"
+          >
+            <option value="general">
+              {language === 'fr' ? 'Général' : 'General'}
+            </option>
+            <option value="no-show">
+              {language === 'fr' ? 'Non-arrivé' : 'No Show'}
+            </option>
+            <option value="late-arrival">
+              {language === 'fr' ? 'Arrivé en retard' : 'Late Arrival'}
+            </option>
+            <option value="cancellation">
+              {language === 'fr' ? 'Annulation' : 'Cancellation'}
+            </option>
+            <option value="modification">
+              {language === 'fr' ? 'Modification' : 'Modification'}
+            </option>
+            <option value="special_instruction">
+              {language === 'fr' ? 'Instruction spéciale' : 'Special Instruction'}
+            </option>
+          </select>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             {language === 'fr' ? 'Note' : 'Note'}
           </label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none text-gray-900 placeholder-gray-400"
             rows={6}
             placeholder={
               language === 'fr'
