@@ -48,7 +48,7 @@ function CheckInContent() {
   const photoPreviewRef = useRef<HTMLDivElement>(null);
   const hasProcessedParams = useRef(false);
 
-  const TIME_WINDOW_MINUTES = 5;
+  const TIME_WINDOW_MINUTES = 2;
 
   // Extract NFC/QR parameters from URL and clean up
   useEffect(() => {
@@ -126,14 +126,18 @@ function CheckInContent() {
           return;
         }
 
-        // Check if tap is still valid (within 15 minutes)
+        // Check if tap is still valid (within TIME_WINDOW_MINUTES)
         const tapTime = new Date(recentTap).getTime();
         const now = Date.now();
         const minutesElapsed = (now - tapTime) / 1000 / 60;
 
-        if (minutesElapsed > 15) {
-          // Tap expired
+        if (minutesElapsed > TIME_WINDOW_MINUTES) {
+          // Tap expired - clear session and show full error
           setBlocked(true);
+          setError(t('language') === 'fr'
+            ? 'Veuillez taper la carte du bénéficiaire ou scanner le code QR à nouveau pour commencer la visite.'
+            : 'Please tap the beneficiary\'s card or scan the QR code again to start the visit.'
+          );
           sessionStorage.removeItem('card_tap_time');
           sessionStorage.removeItem('nfc_qr_code');
           sessionStorage.removeItem('verification_method');
@@ -169,12 +173,14 @@ function CheckInContent() {
         setChallengeToken(data.challengeToken);
         setValidated(true);
       } else {
-        setError(data.message || 'Validation failed');
+        setError(data.message || (t('language') === 'fr' ? 'Échec de la validation' : 'Validation failed'));
         setBlocked(true);
       }
     } catch (err) {
       console.error('Error requesting challenge token:', err);
-      setError('Failed to validate card/QR code');
+      setError(t('language') === 'fr'
+        ? 'Impossible de valider la carte/code QR'
+        : 'Failed to validate card/QR code');
       setBlocked(true);
     }
   };
@@ -415,7 +421,7 @@ function CheckInContent() {
     }
 
     if (!elderly?.id) {
-      setError('Beneficiary not found');
+      setError(t('language') === 'fr' ? 'Bénéficiaire introuvable' : 'Beneficiary not found');
       return;
     }
 
@@ -461,7 +467,9 @@ function CheckInContent() {
       await loadCaregiverNames();
     } catch (err: any) {
       console.error('Error adding caregiver:', err);
-      setError(err?.message || 'Error adding new caregiver');
+      setError(err?.message || (t('language') === 'fr'
+        ? 'Erreur lors de l\'ajout du nouveau soignant'
+        : 'Error adding new caregiver'));
     } finally {
       setSavingNewCaregiver(false);
     }
@@ -577,7 +585,10 @@ function CheckInContent() {
 
     // Block submission if no valid tap
     if (!validated || blocked) {
-      setError('Please tap the beneficiary\'s card/QR code to start the visit.');
+      setError(t('language') === 'fr'
+        ? 'Veuillez taper la carte du bénéficiaire ou scanner le code QR pour commencer la visite.'
+        : 'Please tap the beneficiary\'s card or scan the QR code to start the visit.'
+      );
       return;
     }
 
@@ -592,7 +603,9 @@ function CheckInContent() {
 
     // For NFC method (has secret), challenge token is required
     if (verificationMethod === 'nfc' && !challengeToken) {
-      setError('Invalid NFC tap. Please tap the card again.');
+      setError(t('language') === 'fr'
+        ? 'Tap NFC invalide. Veuillez taper à nouveau la carte.'
+        : 'Invalid NFC tap. Please tap the card again.');
       return;
     }
 
@@ -671,7 +684,7 @@ function CheckInContent() {
     }
   };
 
-  // Blocked state - no valid NFC tap
+  // Blocked state - no valid NFC tap or expired
   if (blocked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-100 px-4">
@@ -680,14 +693,26 @@ function CheckInContent() {
             <AlertCircle className="text-red-600" size={40} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Card or QR Code Required
+            {t('language') === 'fr' ? 'Carte ou code QR requis' : 'Card or QR Code Required'}
           </h1>
-          <p className="text-gray-700 mb-2">
-            Please tap the beneficiary's NFC card or scan the QR code to start your visit.
-          </p>
-          <p className="text-sm text-gray-500">
-            Saved bookmarks and direct links are not allowed for security reasons.
-          </p>
+          {error ? (
+            <p className="text-gray-700 mb-2">
+              {error}
+            </p>
+          ) : (
+            <>
+              <p className="text-gray-700 mb-2">
+                {t('language') === 'fr'
+                  ? 'Veuillez taper la carte NFC du bénéficiaire ou scanner le code QR pour commencer votre visite.'
+                  : 'Please tap the beneficiary\'s NFC card or scan the QR code to start your visit.'}
+              </p>
+              <p className="text-sm text-gray-500">
+                {t('language') === 'fr'
+                  ? 'Les favoris enregistrés et les liens directs ne sont pas autorisés pour des raisons de sécurité.'
+                  : 'Saved bookmarks and direct links are not allowed for security reasons.'}
+              </p>
+            </>
+          )}
         </div>
       </div>
     );
@@ -745,8 +770,8 @@ function CheckInContent() {
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <p className="text-xs text-green-600 flex items-center gap-1">
                     ✓ {verificationMethod === 'nfc'
-                      ? (t('language') === 'fr' ? 'NFC vérifié' : 'NFC verified')
-                      : (t('language') === 'fr' ? 'QR code vérifié' : 'QR code verified')}
+                      ? (t('language') === 'fr' ? 'Carte vérifiée' : 'Card verified')
+                      : (t('language') === 'fr' ? 'Code QR vérifié' : 'QR code verified')}
                   </p>
                   {timeRemaining !== null && timeRemaining > 0 && (
                     <p className={`text-xs flex items-center gap-1 ${
