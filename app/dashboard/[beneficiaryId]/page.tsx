@@ -239,20 +239,29 @@ export default function DashboardPage() {
 
     const dateStr = format(selectedNoteDate, 'yyyy-MM-dd');
 
-    const response = await fetch('/api/daily-notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        beneficiary_id: beneficiaryId,
-        date: dateStr,
-        reason: data.note,
-        note_type: data.noteType,
-        created_by: user?.id,
-      }),
-    });
+    try {
+      const response = await fetch('/api/daily-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          beneficiary_id: beneficiaryId,
+          date: dateStr,
+          reason: data.note,
+          note_type: data.noteType,
+          created_by: user?.id,
+        }),
+      });
 
-    if (response.ok) {
-      await loadDailyNotes();
+      if (response.ok) {
+        await loadDailyNotes();
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to save note:', errorData);
+        alert(`Failed to save note: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error saving note:', error);
+      alert('Error saving note. Please try again.');
     }
   };
 

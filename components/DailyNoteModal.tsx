@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-type NoteType = 'modification' | 'no-show' | 'late-arrival' | 'cancellation' | 'special_instruction' | 'general';
+type NoteType = 'modification' | 'no-show' | 'late-arrival' | 'cancellation' | 'special_instruction' | 'complaint' | 'general';
 
 type DailyNoteModalProps = {
   isOpen: boolean;
@@ -127,6 +127,9 @@ export default function DailyNoteModal({
             </option>
             <option value="special_instruction">
               {language === 'fr' ? 'Instruction spéciale' : 'Special Instruction'}
+            </option>
+            <option value="complaint">
+              {language === 'fr' ? 'Plainte' : 'Complaint'}
             </option>
           </select>
         </div>

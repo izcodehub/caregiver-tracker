@@ -51,7 +51,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { beneficiary_id, date, note_type, reason, created_by } = body;
 
+    console.log('Received note data:', { beneficiary_id, date, note_type, reason, created_by });
+
     if (!beneficiary_id || !date || !reason) {
+      console.error('Missing required fields:', { beneficiary_id, date, reason });
       return NextResponse.json(
         { error: 'beneficiary_id, date, and reason are required' },
         { status: 400 }
@@ -69,18 +72,19 @@ export async function POST(request: NextRequest) {
     let result;
     if (existing) {
       // Update existing note
+      console.log('Updating existing note:', existing.id);
       result = await supabase
         .from('day_notes')
         .update({
           note_type: note_type || 'general',
           reason: reason.trim(),
-          updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
         .select()
         .single();
     } else {
       // Insert new note
+      console.log('Inserting new note');
       result = await supabase
         .from('day_notes')
         .insert({
@@ -94,14 +98,17 @@ export async function POST(request: NextRequest) {
         .single();
     }
 
+    console.log('Supabase result:', { data: result.data, error: result.error });
+
     if (result.error) {
       console.error('Error saving day note:', result.error);
       return NextResponse.json(
-        { error: 'Failed to save note' },
+        { error: 'Failed to save note', details: result.error },
         { status: 500 }
       );
     }
 
+    console.log('Note saved successfully');
     return NextResponse.json({ success: true, note: result.data });
   } catch (error: any) {
     console.error('Day notes POST error:', error);
