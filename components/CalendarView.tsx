@@ -351,7 +351,7 @@ export default function CalendarView({ selectedMonth, checkIns, caregiverColors,
               key={day.toISOString()}
               className={`group min-h-16 sm:min-h-24 p-1 sm:p-2 rounded-lg cursor-pointer transition-all hover:shadow-md relative ${getCellStyle(status)} ${
                 !isCurrentMonth ? 'opacity-40' : ''
-              } ${dayNote ? 'ring-2 ring-orange-400' : ''}`}
+              }`}
               onClick={() => {
                 if (dayCheckIns.length > 0) {
                   onDayClick(day, dayCheckIns);
@@ -362,25 +362,6 @@ export default function CalendarView({ selectedMonth, checkIns, caregiverColors,
                 onAddNote?.(day);
               }}
             >
-              {/* Note indicator badge - top left */}
-              {dayNote && (
-                <div
-                  className="absolute -top-1 -left-1 z-20 cursor-pointer hover:scale-110 transition-transform group/note"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddNote?.(day);
-                  }}
-                >
-                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-500 text-white shadow-md">
-                    <StickyNote size={12} />
-                  </div>
-                  {/* Custom tooltip for note */}
-                  <div className="absolute left-0 top-full mt-1 hidden group-hover/note:block bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap shadow-lg z-30 max-w-[200px] whitespace-normal">
-                    {dayNote.reason}
-                  </div>
-                </div>
-              )}
-
               {/* Holiday indicator badge - always visible in top right */}
               {holidayInfo && (
                 <div
@@ -398,29 +379,54 @@ export default function CalendarView({ selectedMonth, checkIns, caregiverColors,
               )}
 
               <div className="flex justify-between items-start mb-0.5 sm:mb-1">
-                <div className={`text-xs sm:text-sm font-semibold ${
-                  isSameDay(day, new Date()) ? 'text-blue-600' : 'text-gray-700'
-                }`}>
-                  {format(day, 'd')}
+                <div className="flex items-center gap-1">
+                  <div className={`text-xs sm:text-sm font-semibold ${
+                    isSameDay(day, new Date()) ? 'text-blue-600' : 'text-gray-700'
+                  }`}>
+                    {format(day, 'd')}
+                  </div>
+                  {/* Note icon next to date */}
+                  {onAddNote && (
+                    <div className="relative group/note">
+                      {dayNote ? (
+                        // Existing note - white icon on orange background
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAddNote(day);
+                          }}
+                          className="flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                          title={dayNote.reason}
+                        >
+                          <StickyNote size={10} className="sm:w-3 sm:h-3" />
+                        </button>
+                      ) : (
+                        // No note - orange icon on white background
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAddNote(day);
+                          }}
+                          className="flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white border border-orange-500 text-orange-500 hover:bg-orange-50 transition-colors opacity-0 group-hover:opacity-100"
+                          title={language === 'fr' ? 'Ajouter une note' : 'Add note'}
+                        >
+                          <StickyNote size={10} className="sm:w-3 sm:h-3" />
+                        </button>
+                      )}
+                      {/* Tooltip for existing note */}
+                      {dayNote && (
+                        <div className="absolute left-0 top-full mt-1 hidden group-hover/note:block bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap shadow-lg z-30 max-w-[200px] whitespace-normal">
+                          {dayNote.reason}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-1">
                   {dayHours > 0 && (
                     <div className="text-[10px] sm:text-xs font-semibold text-blue-600">
                       {formatHours(dayHours)}
                     </div>
-                  )}
-                  {/* Add note button - visible on hover or if note doesn't exist */}
-                  {onAddNote && !dayNote && dayCheckIns.length === 0 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onAddNote(day);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 text-orange-500 hover:text-orange-600 transition-opacity"
-                      title={language === 'fr' ? 'Ajouter une note' : 'Add note'}
-                    >
-                      <StickyNote size={14} />
-                    </button>
                   )}
                 </div>
               </div>

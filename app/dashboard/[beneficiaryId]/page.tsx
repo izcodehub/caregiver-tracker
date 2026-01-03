@@ -1265,7 +1265,9 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {Object.entries(groupedCheckIns).map(([date, dayCheckIns]) => {
+                  {Object.entries(groupedCheckIns)
+                    .sort(([dateA], [dateB]) => dateB.localeCompare(dateA)) // Sort by date descending
+                    .map(([date, dayCheckIns]) => {
                     const chargedHours = calculateDayHours(dayCheckIns, false);
                     const trainingHours = calculateTrainingHours(dayCheckIns);
                     const hasTraining = dayCheckIns.some(ci => ci.is_training);
