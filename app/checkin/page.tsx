@@ -11,7 +11,7 @@ import LanguageToggle from '@/components/LanguageToggle';
 function CheckInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // NFC/QR parameters (extracted from URL, then cleared)
   const [beneficiaryQrCode, setBeneficiaryQrCode] = useState<string>('');
@@ -134,7 +134,7 @@ function CheckInContent() {
         if (minutesElapsed > TIME_WINDOW_MINUTES) {
           // Tap expired - clear session and show full error
           setBlocked(true);
-          setError(t('language') === 'fr'
+          setError(language === 'fr'
             ? 'Veuillez taper la carte du bénéficiaire ou scanner le code QR à nouveau pour commencer la visite.'
             : 'Please tap the beneficiary\'s card or scan the QR code again to start the visit.'
           );
@@ -173,12 +173,12 @@ function CheckInContent() {
         setChallengeToken(data.challengeToken);
         setValidated(true);
       } else {
-        setError(data.message || (t('language') === 'fr' ? 'Échec de la validation' : 'Validation failed'));
+        setError(data.message || (language === 'fr' ? 'Échec de la validation' : 'Validation failed'));
         setBlocked(true);
       }
     } catch (err) {
       console.error('Error requesting challenge token:', err);
-      setError(t('language') === 'fr'
+      setError(language === 'fr'
         ? 'Impossible de valider la carte/code QR'
         : 'Failed to validate card/QR code');
       setBlocked(true);
@@ -227,7 +227,7 @@ function CheckInContent() {
         setTimeRemaining(0);
         setBlocked(true);
         setValidated(false);
-        setError(t('language') === 'fr'
+        setError(language === 'fr'
           ? `Délai expiré. Veuillez taper à nouveau la carte.`
           : `Time expired. Please tap the card again.`
         );
@@ -303,7 +303,7 @@ function CheckInContent() {
       }
 
       if (err.name === 'AbortError') {
-        setError(t('language') === 'fr'
+        setError(language === 'fr'
           ? 'Délai d\'attente dépassé. Veuillez réessayer.'
           : 'Request timeout. Please try again.');
       } else {
@@ -421,7 +421,7 @@ function CheckInContent() {
     }
 
     if (!elderly?.id) {
-      setError(t('language') === 'fr' ? 'Bénéficiaire introuvable' : 'Beneficiary not found');
+      setError(language === 'fr' ? 'Bénéficiaire introuvable' : 'Beneficiary not found');
       return;
     }
 
@@ -467,7 +467,7 @@ function CheckInContent() {
       await loadCaregiverNames();
     } catch (err: any) {
       console.error('Error adding caregiver:', err);
-      setError(err?.message || (t('language') === 'fr'
+      setError(err?.message || (language === 'fr'
         ? 'Erreur lors de l\'ajout du nouveau soignant'
         : 'Error adding new caregiver'));
     } finally {
@@ -491,17 +491,17 @@ function CheckInContent() {
           setShowLocationHelp(false); // Close modal on error
           if (error.code === error.PERMISSION_DENIED) {
             setLocationError('Location access denied');
-            setError(t('language') === 'fr'
+            setError(language === 'fr'
               ? 'Accès à la localisation refusé. Veuillez activer la localisation dans les paramètres de votre navigateur.'
               : 'Location access denied. Please enable location in your browser settings.');
           } else if (error.code === error.POSITION_UNAVAILABLE) {
             setLocationError('Location unavailable');
-            setError(t('language') === 'fr'
+            setError(language === 'fr'
               ? 'Position indisponible. Vérifiez que le GPS est activé.'
               : 'Location unavailable. Check that GPS is enabled.');
           } else if (error.code === error.TIMEOUT) {
             setLocationError('Location request timeout');
-            setError(t('language') === 'fr'
+            setError(language === 'fr'
               ? 'Délai d\'attente de localisation expiré.'
               : 'Location request timeout.');
           }
@@ -509,7 +509,7 @@ function CheckInContent() {
       );
     } else {
       setLocationError('Geolocation not supported');
-      setError(t('language') === 'fr'
+      setError(language === 'fr'
         ? 'Géolocalisation non prise en charge par ce navigateur.'
         : 'Geolocation not supported by this browser.');
     }
@@ -585,7 +585,7 @@ function CheckInContent() {
 
     // Block submission if no valid tap
     if (!validated || blocked) {
-      setError(t('language') === 'fr'
+      setError(language === 'fr'
         ? 'Veuillez taper la carte du bénéficiaire ou scanner le code QR pour commencer la visite.'
         : 'Please tap the beneficiary\'s card or scan the QR code to start the visit.'
       );
@@ -594,7 +594,7 @@ function CheckInContent() {
 
     // For QR code method (no secret), geolocation is MANDATORY
     if (verificationMethod === 'qr' && (!location || !location.lat || !location.lng)) {
-      setError(t('language') === 'fr'
+      setError(language === 'fr'
         ? 'La localisation est requise pour le code QR. Veuillez cliquer sur "Localisation requise" ci-dessus.'
         : 'Geolocation is required for QR code. Please click "Geolocation required" above.');
       setLocationError('Location required for QR code check-in');
@@ -603,7 +603,7 @@ function CheckInContent() {
 
     // For NFC method (has secret), challenge token is required
     if (verificationMethod === 'nfc' && !challengeToken) {
-      setError(t('language') === 'fr'
+      setError(language === 'fr'
         ? 'Tap NFC invalide. Veuillez taper à nouveau la carte.'
         : 'Invalid NFC tap. Please tap the card again.');
       return;
@@ -620,7 +620,7 @@ function CheckInContent() {
     const minutesElapsed = (now - tapTime) / 1000 / 60;
 
     if (minutesElapsed > TIME_WINDOW_MINUTES) {
-      setError(t('language') === 'fr'
+      setError(language === 'fr'
         ? `Délai expiré. Vous devez soumettre dans les ${TIME_WINDOW_MINUTES} minutes suivant le tap de la carte. Veuillez taper à nouveau la carte.`
         : `Time expired. You must submit within ${TIME_WINDOW_MINUTES} minutes of tapping the card. Please tap the card again.`
       );
@@ -693,7 +693,7 @@ function CheckInContent() {
             <AlertCircle className="text-red-600" size={40} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            {t('language') === 'fr' ? 'Carte ou code QR requis' : 'Card or QR Code Required'}
+            {language === 'fr' ? 'Carte ou code QR requis' : 'Card or QR Code Required'}
           </h1>
           {error ? (
             <p className="text-gray-700 mb-2">
@@ -702,12 +702,12 @@ function CheckInContent() {
           ) : (
             <>
               <p className="text-gray-700 mb-2">
-                {t('language') === 'fr'
+                {language === 'fr'
                   ? 'Veuillez taper la carte NFC du bénéficiaire ou scanner le code QR pour commencer votre visite.'
                   : 'Please tap the beneficiary\'s NFC card or scan the QR code to start your visit.'}
               </p>
               <p className="text-sm text-gray-500">
-                {t('language') === 'fr'
+                {language === 'fr'
                   ? 'Les favoris enregistrés et les liens directs ne sont pas autorisés pour des raisons de sécurité.'
                   : 'Saved bookmarks and direct links are not allowed for security reasons.'}
               </p>
@@ -770,8 +770,8 @@ function CheckInContent() {
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <p className="text-xs text-green-600 flex items-center gap-1">
                     ✓ {verificationMethod === 'nfc'
-                      ? (t('language') === 'fr' ? 'Carte vérifiée' : 'Card verified')
-                      : (t('language') === 'fr' ? 'Code QR vérifié' : 'QR code verified')}
+                      ? (language === 'fr' ? 'Carte vérifiée' : 'Card verified')
+                      : (language === 'fr' ? 'Code QR vérifié' : 'QR code verified')}
                   </p>
                   {timeRemaining !== null && timeRemaining > 0 && (
                     <p className={`text-xs flex items-center gap-1 ${
@@ -779,7 +779,7 @@ function CheckInContent() {
                     }`}>
                       ⏱️ {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
                       {' '}
-                      {t('language') === 'fr' ? 'restantes' : 'remaining'}
+                      {language === 'fr' ? 'restantes' : 'remaining'}
                     </p>
                   )}
                   {verificationMethod === 'qr' && (
@@ -794,8 +794,8 @@ function CheckInContent() {
                     >
                       <MapPin size={12} />
                       {location
-                        ? (t('language') === 'fr' ? '✓ Localisation activée' : '✓ Location enabled')
-                        : (t('language') === 'fr' ? 'Localisation requise - Cliquer ici' : 'Geolocation required - Click here')}
+                        ? (language === 'fr' ? '✓ Localisation activée' : '✓ Location enabled')
+                        : (language === 'fr' ? 'Localisation requise - Cliquer ici' : 'Geolocation required - Click here')}
                     </button>
                   )}
                 </div>
@@ -1077,11 +1077,11 @@ function CheckInContent() {
                 </div>
 
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  {t('language') === 'fr' ? 'Localisation requise' : 'Location Required'}
+                  {language === 'fr' ? 'Localisation requise' : 'Location Required'}
                 </h3>
 
                 <p className="text-gray-700 mb-6">
-                  {t('language') === 'fr'
+                  {language === 'fr'
                     ? "Activez votre géolocalisation pour soumettre votre arrivée"
                     : "Enable your geolocation to submit your arrival"}
                 </p>
@@ -1093,13 +1093,13 @@ function CheckInContent() {
                     }}
                     className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
                   >
-                    {t('language') === 'fr' ? 'Activer' : 'Enable'}
+                    {language === 'fr' ? 'Activer' : 'Enable'}
                   </button>
                   <button
                     onClick={() => setShowLocationHelp(false)}
                     className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    {t('language') === 'fr' ? 'Annuler' : 'Cancel'}
+                    {language === 'fr' ? 'Annuler' : 'Cancel'}
                   </button>
                 </div>
               </div>
