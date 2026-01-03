@@ -42,6 +42,17 @@ type TrainingSummary = {
   totalHours: number;
 };
 
+type DailyNote = {
+  id: string;
+  beneficiary_id: string;
+  date: string;
+  note_type?: string;
+  reason: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type CaregiverBreakdownProps = {
   checkIns: CheckInOut[];
   selectedMonth: Date;
@@ -50,6 +61,7 @@ type CaregiverBreakdownProps = {
   currency: string;
   copayPercentage: number;
   caregiverColors: Map<string, string>;
+  dailyNotes: DailyNote[];
 };
 
 export default function CaregiverBreakdown({
@@ -60,6 +72,7 @@ export default function CaregiverBreakdown({
   currency,
   copayPercentage,
   caregiverColors,
+  dailyNotes,
 }: CaregiverBreakdownProps) {
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
@@ -594,6 +607,64 @@ export default function CaregiverBreakdown({
               </div>
             </div>
           )}
+
+          {/* Notes Summary */}
+          {dailyNotes.length > 0 && (() => {
+            // Count notes by type
+            const notesByType: Record<string, number> = {};
+            dailyNotes.forEach(note => {
+              const type = note.note_type || 'general';
+              notesByType[type] = (notesByType[type] || 0) + 1;
+            });
+
+            // Translation mapping and order
+            const noteTypesOrdered = [
+              { key: 'complaint', fr: 'Plainte', en: 'Complaint' },
+              { key: 'no-show', fr: 'Non-arrivé', en: 'No Show' },
+              { key: 'late-arrival', fr: 'Arrivé en retard', en: 'Late Arrival' },
+              { key: 'modification', fr: 'Modification', en: 'Modification' },
+              { key: 'cancellation', fr: 'Annulation', en: 'Cancellation' },
+              { key: 'general', fr: 'Général', en: 'General' },
+              { key: 'special_instruction', fr: 'Instruction spéciale', en: 'Special Instruction' },
+            ];
+
+            return (
+              <div className="mt-6 p-4 md:p-6 bg-orange-50 rounded-lg border-2 border-orange-200">
+                <h3 className="text-base md:text-lg font-semibold text-orange-900 mb-3">
+                  {language === 'fr' ? 'Résumé des Notes' : 'Notes Summary'}
+                </h3>
+                <p className="text-xs md:text-sm text-orange-700 mb-4">
+                  {language === 'fr'
+                    ? `${dailyNotes.length} note${dailyNotes.length > 1 ? 's' : ''} pour ce mois`
+                    : `${dailyNotes.length} note${dailyNotes.length > 1 ? 's' : ''} for this month`
+                  }
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {noteTypesOrdered
+                    .filter(noteType => notesByType[noteType.key] > 0)
+                    .map(noteType => {
+                      const count = notesByType[noteType.key];
+                      return (
+                        <div key={noteType.key} className="bg-white rounded-lg p-3 border border-orange-200">
+                          <div className="flex items-baseline gap-1.5 mb-2">
+                            <span className="text-2xl font-bold text-orange-600">{count}</span>
+                            <span className="text-xs text-gray-900">
+                              {language === 'fr'
+                                ? `jour${count > 1 ? 's' : ''}`
+                                : `day${count > 1 ? 's' : ''}`
+                              }
+                            </span>
+                          </div>
+                          <div className="text-base font-semibold text-orange-600">
+                            {language === 'fr' ? noteType.fr : noteType.en}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="mt-6 p-3 md:p-4 bg-blue-50 rounded-lg border border-blue-200">
             <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2 text-sm md:text-base">

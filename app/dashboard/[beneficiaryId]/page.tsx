@@ -1032,6 +1032,7 @@ export default function DashboardPage() {
               currency={elderly.currency || 'EUR'}
               copayPercentage={elderly.ticket_moderateur || 0}
               caregiverColors={caregiverColors}
+              dailyNotes={dailyNotes}
             />
           </div>
         )}
