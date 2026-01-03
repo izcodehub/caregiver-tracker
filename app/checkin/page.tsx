@@ -41,11 +41,14 @@ function CheckInContent() {
   const [savingNewCaregiver, setSavingNewCaregiver] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [showLocationHelp, setShowLocationHelp] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const photoPreviewRef = useRef<HTMLDivElement>(null);
   const hasProcessedParams = useRef(false);
+
+  const TIME_WINDOW_MINUTES = 5;
 
   // Extract NFC/QR parameters from URL and clean up
   useEffect(() => {
@@ -200,6 +203,41 @@ function CheckInContent() {
       setShowLocationHelp(true);
     }
   }, [verificationMethod, validated, location]);
+
+  // Countdown timer for NFC tap expiration
+  useEffect(() => {
+    if (!tapTimestamp || !validated) {
+      setTimeRemaining(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const tapTime = new Date(tapTimestamp).getTime();
+      const secondsElapsed = (now - tapTime) / 1000;
+      const secondsRemaining = (TIME_WINDOW_MINUTES * 60) - secondsElapsed;
+
+      if (secondsRemaining <= 0) {
+        setTimeRemaining(0);
+        setBlocked(true);
+        setValidated(false);
+        setError(t('language') === 'fr'
+          ? `Délai expiré. Veuillez taper à nouveau la carte.`
+          : `Time expired. Please tap the card again.`
+        );
+      } else {
+        setTimeRemaining(Math.ceil(secondsRemaining));
+      }
+    };
+
+    // Update immediately
+    updateTimer();
+
+    // Update every second
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [tapTimestamp, validated, t]);
 
   // Load caregiver names after elderly data is loaded
   useEffect(() => {
@@ -563,6 +601,21 @@ function CheckInContent() {
       return;
     }
 
+    // Validate time window: form must be submitted within TIME_WINDOW_MINUTES of NFC tap
+    const now = new Date().getTime();
+    const tapTime = new Date(tapTimestamp).getTime();
+    const minutesElapsed = (now - tapTime) / 1000 / 60;
+
+    if (minutesElapsed > TIME_WINDOW_MINUTES) {
+      setError(t('language') === 'fr'
+        ? `Délai expiré. Vous devez soumettre dans les ${TIME_WINDOW_MINUTES} minutes suivant le tap de la carte. Veuillez taper à nouveau la carte.`
+        : `Time expired. You must submit within ${TIME_WINDOW_MINUTES} minutes of tapping the card. Please tap the card again.`
+      );
+      setBlocked(true);
+      setValidated(false);
+      return;
+    }
+
     setSubmitting(true);
     setError('');
     setLocationError('');
@@ -695,6 +748,15 @@ function CheckInContent() {
                       ? (t('language') === 'fr' ? 'NFC vérifié' : 'NFC verified')
                       : (t('language') === 'fr' ? 'QR code vérifié' : 'QR code verified')}
                   </p>
+                  {timeRemaining !== null && timeRemaining > 0 && (
+                    <p className={`text-xs flex items-center gap-1 ${
+                      timeRemaining <= 60 ? 'text-red-600 font-bold animate-pulse' : 'text-gray-600'
+                    }`}>
+                      ⏱️ {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+                      {' '}
+                      {t('language') === 'fr' ? 'restantes' : 'remaining'}
+                    </p>
+                  )}
                   {verificationMethod === 'qr' && (
                     <button
                       type="button"
