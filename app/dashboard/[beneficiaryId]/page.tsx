@@ -35,6 +35,7 @@ import CalendarView from '@/components/CalendarView';
 import CaregiverBreakdown from '@/components/CaregiverBreakdown';
 import LanguageToggle from '@/components/LanguageToggle';
 import NotificationPermissionButton from '@/components/NotificationPermissionButton';
+import DailyNoteModal from '@/components/DailyNoteModal';
 import { createColorMap, type CaregiverColor } from '@/lib/caregiver-colors';
 import { getTimezoneForCountry, formatTimeWithDateFns, formatInBeneficiaryTimezone } from '@/lib/timezone-utils';
 
@@ -78,6 +79,19 @@ type CurrentStatus = {
   hours_today: number;
 };
 
+type DailyNote = {
+  id: string;
+  beneficiary_id: string;
+  date: string;
+  note_type?: 'modification' | 'cancellation' | 'special_instruction' | 'general';
+  original_time?: string;
+  modified_time?: string;
+  reason: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+};
+
 // Component for showing running time for active check-ins
 function RunningTimer({ checkInTime }: { checkInTime: Date }) {
   const [elapsed, setElapsed] = useState('');
@@ -118,6 +132,9 @@ export default function DashboardPage() {
   const [currentStatus, setCurrentStatus] = useState<CurrentStatus | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  const [dailyNotes, setDailyNotes] = useState<DailyNote[]>([]);
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [selectedNoteDate, setSelectedNoteDate] = useState<Date | null>(null);
   const [showPhoto, setShowPhoto] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'calendar' | 'history' | 'financial' | 'info'>('calendar');
   const [selectedDayView, setSelectedDayView] = useState<{ date: Date; checkIns: CheckInOut[] } | null>(null);
@@ -189,6 +206,70 @@ export default function DashboardPage() {
     }
   };
 
+  const loadDailyNotes = async () => {
+    try {
+      const startDate = format(startOfMonth(selectedMonth), 'yyyy-MM-dd');
+      const endDate = format(endOfMonth(selectedMonth), 'yyyy-MM-dd');
+
+      const { data, error } = await supabase
+        .from('day_notes')
+        .select('*')
+        .eq('beneficiary_id', beneficiaryId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Error loading day notes:', error);
+      } else {
+        setDailyNotes(data || []);
+      }
+    } catch (error) {
+      console.error('Error loading day notes:', error);
+    }
+  };
+
+  const handleAddNote = (date: Date) => {
+    setSelectedNoteDate(date);
+    setNoteModalOpen(true);
+  };
+
+  const handleSaveNote = async (note: string) => {
+    if (!selectedNoteDate) return;
+
+    const dateStr = format(selectedNoteDate, 'yyyy-MM-dd');
+
+    const response = await fetch('/api/daily-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        beneficiary_id: beneficiaryId,
+        date: dateStr,
+        reason: note,
+        note_type: 'general',
+        created_by: user?.id,
+      }),
+    });
+
+    if (response.ok) {
+      await loadDailyNotes();
+    }
+  };
+
+  const handleDeleteNote = async () => {
+    if (!selectedNoteDate) return;
+
+    const dateStr = format(selectedNoteDate, 'yyyy-MM-dd');
+
+    const response = await fetch(`/api/daily-notes?beneficiary_id=${beneficiaryId}&date=${dateStr}`, {
+      method: 'DELETE',
+    });
+
+    if (response.ok) {
+      await loadDailyNotes();
+    }
+  };
+
   const loadData = async () => {
     try {
       // Load specific elderly data by ID
@@ -217,6 +298,9 @@ export default function DashboardPage() {
           .order('timestamp', { ascending: false });
 
         setCheckIns(checkInsData || []);
+
+        // Load daily notes
+        await loadDailyNotes();
 
         // Load caregiver colors
         const { data: caregiversData } = await supabase
@@ -673,6 +757,8 @@ export default function DashboardPage() {
               checkIns={checkIns}
               caregiverColors={caregiverColors}
               timezone={timezone}
+              dailyNotes={dailyNotes}
+              onAddNote={handleAddNote}
               onDayClick={(date, dayCheckIns) => {
                 setSelectedDayView({ date, checkIns: dayCheckIns });
               }}
@@ -1160,6 +1246,8 @@ export default function DashboardPage() {
                     const trainingHours = calculateTrainingHours(dayCheckIns);
                     const hasTraining = dayCheckIns.some(ci => ci.is_training);
 
+                    const dayNote = dailyNotes.find(note => note.date === date);
+
                     return (
                       <div key={date} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
@@ -1186,6 +1274,31 @@ export default function DashboardPage() {
                             )}
                           </div>
                         </div>
+
+                        {/* Daily Note - Orange Card */}
+                        {dayNote && (
+                          <div className="mb-3 bg-orange-50 border-l-4 border-orange-500 rounded-lg p-3">
+                            <div className="flex items-start gap-2">
+                              <div className="flex-shrink-0 mt-0.5">
+                                <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
+                                  <span className="text-white text-xs font-bold">!</span>
+                                </div>
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-orange-900 mb-1">
+                                  {language === 'fr' ? 'Note' : 'Note'}
+                                </p>
+                                <p className="text-sm text-orange-800">{dayNote.reason}</p>
+                              </div>
+                              <button
+                                onClick={() => handleAddNote(new Date(date))}
+                                className="text-orange-600 hover:text-orange-700 text-xs underline"
+                              >
+                                {language === 'fr' ? 'Modifier' : 'Edit'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="space-y-2">
                           {(() => {
@@ -1486,6 +1599,29 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Daily Note Modal */}
+      {selectedNoteDate && (
+        <DailyNoteModal
+          isOpen={noteModalOpen}
+          onClose={() => setNoteModalOpen(false)}
+          beneficiaryId={beneficiaryId}
+          date={selectedNoteDate}
+          existingNote={
+            dailyNotes.find(
+              (note) => note.date === format(selectedNoteDate, 'yyyy-MM-dd')
+            )?.reason
+          }
+          onSave={handleSaveNote}
+          onDelete={
+            dailyNotes.find(
+              (note) => note.date === format(selectedNoteDate, 'yyyy-MM-dd')
+            )
+              ? handleDeleteNote
+              : undefined
+          }
+        />
       )}
 
     </div>
