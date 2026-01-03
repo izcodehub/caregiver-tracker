@@ -6,9 +6,10 @@ import { Download } from 'lucide-react';
 interface QRCodeGeneratorProps {
   qrCode: string;
   elderlyName: string;
+  language?: 'fr' | 'en';
 }
 
-export default function QRCodeGenerator({ qrCode, elderlyName }: QRCodeGeneratorProps) {
+export default function QRCodeGenerator({ qrCode, elderlyName, language = 'fr' }: QRCodeGeneratorProps) {
   // QR code does NOT include secret token - only the qr_code
   // When no secret is present, geolocation becomes MANDATORY
   const checkInUrl = `${process.env.NEXT_PUBLIC_APP_URL}/checkin?qr_code=${qrCode}&method=qr`;
@@ -50,20 +51,14 @@ export default function QRCodeGenerator({ qrCode, elderlyName }: QRCodeGenerator
           className="w-full h-auto max-w-[200px] sm:max-w-[256px]"
         />
       </div>
-      <a
-        href={checkInUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-xs sm:text-sm text-blue-600 hover:underline text-center break-all px-2 w-full"
-      >
-        {checkInUrl}
-      </a>
       <button
         onClick={downloadQRCode}
         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
       >
         <Download size={18} />
-        <span className="whitespace-nowrap">Download QR Code</span>
+        <span className="whitespace-nowrap">
+          {language === 'fr' ? 'Télécharger QR' : 'Download QR'}
+        </span>
       </button>
     </div>
   );

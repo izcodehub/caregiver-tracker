@@ -29,6 +29,7 @@ import {
   UserPlus,
   X,
   CircleAlert,
+  Copy,
 } from 'lucide-react';
 import QRCodeGenerator from '@/components/QRCodeGenerator';
 import CalendarView from '@/components/CalendarView';
@@ -139,6 +140,8 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<'calendar' | 'history' | 'financial' | 'info'>('calendar');
   const [selectedDayView, setSelectedDayView] = useState<{ date: Date; checkIns: CheckInOut[] } | null>(null);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [showNFCCode, setShowNFCCode] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberPhone, setNewMemberPhone] = useState('');
@@ -276,6 +279,15 @@ export default function DashboardPage() {
 
     if (response.ok) {
       await loadDailyNotes();
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // Optional: Show a success message
+    } catch (error) {
+      console.error('Failed to copy:', error);
     }
   };
 
@@ -842,6 +854,36 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {/* Daily Note - Orange Card */}
+            {(() => {
+              const dateStr = format(selectedDayView.date, 'yyyy-MM-dd');
+              const dayNote = dailyNotes.find(note => note.date === dateStr);
+
+              return dayNote ? (
+                <div className="mb-6 bg-orange-50 border-l-4 border-orange-500 rounded-lg p-4 shadow-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-sm font-bold">!</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-base font-semibold text-orange-900 mb-2">
+                        {language === 'fr' ? 'Note du jour' : 'Daily Note'}
+                      </p>
+                      <p className="text-sm text-orange-800">{dayNote.reason}</p>
+                    </div>
+                    <button
+                      onClick={() => handleAddNote(selectedDayView.date)}
+                      className="text-orange-600 hover:text-orange-700 text-sm underline flex-shrink-0"
+                    >
+                      {language === 'fr' ? 'Modifier' : 'Edit'}
+                    </button>
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
             {/* Day Check-ins */}
             {selectedDayView.checkIns.length === 0 ? (
               <div className="bg-white rounded-lg shadow-lg p-12 text-center">
@@ -943,7 +985,7 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Desktop: Check-in left, Check-out right */}
-                        <div className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] gap-6 items-center">
+                        <div className="hidden lg:grid lg:grid-cols-2 gap-6 items-center">
                           {/* Left: Check-in */}
                           <div className="flex items-center gap-4 p-4 rounded-lg bg-green-50 border-l-4 border-green-500">
                             <CheckCircle className="text-green-600" size={28} />
@@ -965,22 +1007,6 @@ export default function DashboardPage() {
                                 )}
                               </div>
                             </div>
-                          </div>
-
-                          {/* Center: Duration */}
-                          <div className="text-center px-4">
-                            {pair.checkOut ? (
-                              <div className="text-xl font-bold text-blue-600">
-                                {(() => {
-                                  const duration = (new Date(pair.checkOut.timestamp).getTime() - new Date(pair.checkIn.timestamp).getTime()) / (1000 * 60 * 60);
-                                  return `${duration.toFixed(2)}h`;
-                                })()}
-                              </div>
-                            ) : isActive ? (
-                              <RunningTimer checkInTime={new Date(pair.checkIn.timestamp)} />
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
                           </div>
 
                           {/* Right: Check-out */}
@@ -1042,33 +1068,109 @@ export default function DashboardPage() {
           <div className="grid lg:grid-cols-2 gap-6 mb-6 w-full overflow-hidden">
             {/* QR Code Section */}
             <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full overflow-hidden">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">QR Code</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                {language === 'fr' ? 'QR Code' : 'QR Code'}
+              </h2>
               <div className="flex flex-col items-center">
                 <QRCodeGenerator
                   qrCode={elderly.qr_code}
                   elderlyName={elderly.name}
+                  language={language}
                 />
-                <p className="mt-4 text-sm text-gray-600 text-center">
-                  Scan or click to check in/out (geolocation required)
-                </p>
+                <div className="mt-4 w-full space-y-3">
+                  {/* Reveal QR Button */}
+                  {showQRCode ? (
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <p className="text-xs text-gray-600 mb-2">
+                        {language === 'fr' ? 'Lien QR Code' : 'QR Code Link'}
+                      </p>
+                      <div className="flex items-center gap-2 bg-white p-2 rounded border border-gray-200">
+                        <a
+                          href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://caregiver-tracker-iz.vercel.app'}/checkin?qr_code=${elderly.qr_code}&method=qr`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline break-all flex-1"
+                        >
+                          {`${process.env.NEXT_PUBLIC_APP_URL || 'https://caregiver-tracker-iz.vercel.app'}/checkin?qr_code=${elderly.qr_code}&method=qr`}
+                        </a>
+                        <button
+                          onClick={() => copyToClipboard(`${process.env.NEXT_PUBLIC_APP_URL || 'https://caregiver-tracker-iz.vercel.app'}/checkin?qr_code=${elderly.qr_code}&method=qr`)}
+                          className="text-gray-600 hover:text-gray-800 flex-shrink-0"
+                          title={language === 'fr' ? 'Copier' : 'Copy'}
+                        >
+                          <Copy size={16} />
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => setShowQRCode(false)}
+                        className="mt-2 text-xs text-blue-600 hover:underline"
+                      >
+                        {language === 'fr' ? 'Masquer' : 'Hide'}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowQRCode(true)}
+                      className="w-full px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                    >
+                      {language === 'fr' ? 'Révéler QR' : 'Reveal QR'}
+                    </button>
+                  )}
+
+                  {/* Reveal NFC Button */}
+                  {showNFCCode ? (
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <p className="text-xs text-gray-600 mb-2">
+                        {language === 'fr' ? 'Lien NFC' : 'NFC Link'}
+                      </p>
+                      <div className="flex items-center gap-2 bg-white p-2 rounded border border-gray-200">
+                        <code className="text-xs text-gray-900 break-all flex-1">
+                          {`${process.env.NEXT_PUBLIC_APP_URL || 'https://caregiver-tracker-iz.vercel.app'}/checkin?qr_code=${elderly.qr_code}&secret=${elderly.nfc_secret}&method=nfc`}
+                        </code>
+                        <button
+                          onClick={() => copyToClipboard(`${process.env.NEXT_PUBLIC_APP_URL || 'https://caregiver-tracker-iz.vercel.app'}/checkin?qr_code=${elderly.qr_code}&secret=${elderly.nfc_secret}&method=nfc`)}
+                          className="text-gray-600 hover:text-gray-800 flex-shrink-0"
+                          title={language === 'fr' ? 'Copier' : 'Copy'}
+                        >
+                          <Copy size={16} />
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => setShowNFCCode(false)}
+                        className="mt-2 text-xs text-blue-600 hover:underline"
+                      >
+                        {language === 'fr' ? 'Masquer' : 'Hide'}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowNFCCode(true)}
+                      className="w-full px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                    >
+                      {language === 'fr' ? 'Révéler NFC' : 'Reveal NFC'}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Beneficiary Information */}
             <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full overflow-hidden">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Beneficiary Information</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                {language === 'fr' ? 'Informations Bénéficiaire' : 'Beneficiary Information'}
+              </h2>
               <div className="space-y-3 w-full">
                 <div className="flex items-start gap-3 w-full">
                   <User className="text-blue-600 mt-1 flex-shrink-0" size={20} />
                   <div className="flex-1 min-w-0 overflow-hidden">
-                    <div className="text-sm text-gray-600">Name</div>
+                    <div className="text-sm text-gray-600">{language === 'fr' ? 'Nom' : 'Name'}</div>
                     <div className="font-semibold text-gray-900 break-words">{elderly.name}</div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 w-full">
                   <Home className="text-blue-600 mt-1 flex-shrink-0" size={20} />
                   <div className="flex-1 min-w-0 overflow-hidden">
-                    <div className="text-sm text-gray-600">Address</div>
+                    <div className="text-sm text-gray-600">{language === 'fr' ? 'Adresse' : 'Address'}</div>
                     <div className="font-semibold text-gray-900 break-words">{elderly.address}</div>
                   </div>
                 </div>
@@ -1076,7 +1178,7 @@ export default function DashboardPage() {
                   <div className="flex items-start gap-3">
                     <MapPin className="text-blue-600 mt-1 flex-shrink-0" size={20} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-gray-600">Country</div>
+                      <div className="text-sm text-gray-600">{language === 'fr' ? 'Pays' : 'Country'}</div>
                       <div className="font-semibold text-gray-900 break-words">{elderly.country}</div>
                     </div>
                   </div>
@@ -1085,11 +1187,24 @@ export default function DashboardPage() {
                   <div className="flex items-start gap-3">
                     <Euro className="text-blue-600 mt-1 flex-shrink-0" size={20} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-gray-600">Rates</div>
+                      <div className="text-sm text-gray-600">{language === 'fr' ? 'Tarifs' : 'Rates'}</div>
                       <div className="font-semibold text-gray-900 break-words">
-                        Regular: {elderly.currency}{elderly.regular_rate}/h
+                        {language === 'fr' ? 'Normal' : 'Regular'}: {elderly.currency}{elderly.regular_rate}/h
                         {' | '}
-                        Holiday: {elderly.currency}{elderly.holiday_rate}/h
+                        {language === 'fr' ? 'Férié' : 'Holiday'}: {elderly.currency}{elderly.holiday_rate}/h
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {elderly.ticket_moderateur !== undefined && elderly.ticket_moderateur > 0 && (
+                  <div className="flex items-start gap-3">
+                    <Euro className="text-blue-600 mt-1 flex-shrink-0" size={20} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-gray-600">
+                        {language === 'fr' ? 'Ticket Modérateur' : 'Co-payment'}
+                      </div>
+                      <div className="font-semibold text-gray-900 break-words">
+                        {elderly.ticket_moderateur}%
                       </div>
                     </div>
                   </div>
@@ -1099,7 +1214,9 @@ export default function DashboardPage() {
               {/* Primary Contact */}
               {familyMembers.length > 0 && familyMembers.find(m => m.role === 'primary') && (
                 <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Primary Contact</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                    {language === 'fr' ? 'Contact Principal' : 'Primary Contact'}
+                  </h3>
                   {(() => {
                     const primaryContact = familyMembers.find(m => m.role === 'primary');
                     if (!primaryContact) return null;
@@ -1131,14 +1248,16 @@ export default function DashboardPage() {
                           ) : (
                             <div className="text-sm">
                               <div className="flex items-center justify-between">
-                                <span className="text-gray-700">Push Notifications</span>
+                                <span className="text-gray-700">
+                                  {language === 'fr' ? 'Notifications Push' : 'Push Notifications'}
+                                </span>
                                 {primaryContact.has_push_subscription ? (
                                   <span className="text-xs font-medium text-green-600 flex items-center gap-1">
-                                    <CheckCircle size={14} /> Enabled
+                                    <CheckCircle size={14} /> {language === 'fr' ? 'Activé' : 'Enabled'}
                                   </span>
                                 ) : (
                                   <span className="text-xs text-gray-400 flex items-center gap-1">
-                                    <XCircle size={14} /> Not enabled
+                                    <XCircle size={14} /> {language === 'fr' ? 'Non activé' : 'Not enabled'}
                                   </span>
                                 )}
                               </div>
@@ -1155,17 +1274,23 @@ export default function DashboardPage() {
             {/* Family Members Section */}
             <div className="lg:col-span-2 bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full overflow-hidden">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Additional Family Members</h2>
+                <h2 className="text-xl font-semibold text-gray-800">
+                  {language === 'fr' ? 'Membres de la famille supplémentaires' : 'Additional Family Members'}
+                </h2>
                 <button
                   onClick={() => setShowAddMemberModal(true)}
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
                 >
                   <UserPlus size={20} />
-                  <span className="text-sm sm:text-base">Add Family Member</span>
+                  <span className="text-sm sm:text-base">
+                    {language === 'fr' ? 'Ajouter un membre' : 'Add Family Member'}
+                  </span>
                 </button>
               </div>
               {familyMembers.filter(m => m.role !== 'primary').length === 0 ? (
-                <p className="text-gray-600 text-center py-8">No additional family members</p>
+                <p className="text-gray-600 text-center py-8">
+                  {language === 'fr' ? 'Aucun membre supplémentaire' : 'No additional family members'}
+                </p>
               ) : (
                 <div className="grid md:grid-cols-2 gap-4 w-full">
                   {familyMembers.filter(m => m.role !== 'primary').map((member) => (
@@ -1205,14 +1330,16 @@ export default function DashboardPage() {
                           ) : (
                             <div className="text-sm">
                               <div className="flex items-center justify-between">
-                                <span className="text-gray-700">Push Notifications</span>
+                                <span className="text-gray-700">
+                                  {language === 'fr' ? 'Notifications Push' : 'Push Notifications'}
+                                </span>
                                 {member.has_push_subscription ? (
                                   <span className="text-xs font-medium text-green-600 flex items-center gap-1">
-                                    <CheckCircle size={14} /> Enabled
+                                    <CheckCircle size={14} /> {language === 'fr' ? 'Activé' : 'Enabled'}
                                   </span>
                                 ) : (
                                   <span className="text-xs text-gray-400 flex items-center gap-1">
-                                    <XCircle size={14} /> Not enabled
+                                    <XCircle size={14} /> {language === 'fr' ? 'Non activé' : 'Not enabled'}
                                   </span>
                                 )}
                               </div>
@@ -1444,7 +1571,7 @@ export default function DashboardPage() {
                                   </div>
 
                                   {/* Desktop: Check-in left, Check-out right */}
-                                  <div className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] gap-4 items-center">
+                                  <div className="hidden lg:grid lg:grid-cols-2 gap-4 items-center">
                                     {/* Left: Check-in */}
                                     <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border-l-4 border-green-500">
                                       <CheckCircle className="text-green-600" size={20} />
@@ -1466,22 +1593,6 @@ export default function DashboardPage() {
                                           )}
                                         </div>
                                       </div>
-                                    </div>
-
-                                    {/* Center: Duration or status */}
-                                    <div className="text-center px-4">
-                                      {pair.checkOut ? (
-                                        <div className="text-base font-bold text-blue-600">
-                                          {(() => {
-                                            const duration = (new Date(pair.checkOut.timestamp).getTime() - new Date(pair.checkIn.timestamp).getTime()) / (1000 * 60 * 60);
-                                            return `${duration.toFixed(2)}h`;
-                                          })()}
-                                        </div>
-                                      ) : isActive ? (
-                                        <RunningTimer checkInTime={new Date(pair.checkIn.timestamp)} />
-                                      ) : (
-                                        <span className="text-sm text-gray-400">—</span>
-                                      )}
                                     </div>
 
                                     {/* Right: Check-out */}

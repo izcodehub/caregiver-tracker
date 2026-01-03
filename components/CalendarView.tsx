@@ -1,6 +1,7 @@
 'use client';
 
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
+import { fr, enUS } from 'date-fns/locale';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { useState, useEffect } from 'react';
 import { getHolidayType } from '@/lib/holidays';
@@ -296,8 +297,8 @@ export default function CalendarView({ selectedMonth, checkIns, caregiverColors,
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
-        <h2 className="text-xl font-semibold text-gray-800">
-          {format(selectedMonth, 'MMMM yyyy')}
+        <h2 className="text-xl font-semibold text-gray-800 capitalize">
+          {format(selectedMonth, 'MMMM yyyy', { locale: language === 'fr' ? fr : enUS })}
         </h2>
         <div className="flex flex-wrap items-center gap-4 text-sm sm:text-base">
           <div className="text-right">
