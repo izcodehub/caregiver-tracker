@@ -21,7 +21,7 @@ type DailyNote = {
   id: string;
   beneficiary_id: string;
   date: string;
-  note_type: string;
+  note_type?: string;
   reason: string;
 };
 
