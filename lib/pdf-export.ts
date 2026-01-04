@@ -262,7 +262,9 @@ export function exportFinancialSummaryToPDF(
   if (dailyNotes.length > 0) {
     const noteTypes: Record<string, number> = {};
     dailyNotes.forEach(note => {
-      noteTypes[note.note_type] = (noteTypes[note.note_type] || 0) + 1;
+      if (note.note_type) {
+        noteTypes[note.note_type] = (noteTypes[note.note_type] || 0) + 1;
+      }
     });
 
     const notesY = (doc as any).lastAutoTable.finalY + 10;
@@ -709,7 +711,9 @@ function addFinancialSummaryToPage(
   if (dailyNotes.length > 0) {
     const noteTypes: Record<string, number> = {};
     dailyNotes.forEach(note => {
-      noteTypes[note.note_type] = (noteTypes[note.note_type] || 0) + 1;
+      if (note.note_type) {
+        noteTypes[note.note_type] = (noteTypes[note.note_type] || 0) + 1;
+      }
     });
 
     const notesY = (doc as any).lastAutoTable.finalY + 3;
