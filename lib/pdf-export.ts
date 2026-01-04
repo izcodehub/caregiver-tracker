@@ -249,12 +249,12 @@ export function exportFinancialSummaryToPDF(
     startY: currentY,
     head: [[language === 'fr' ? 'Résumé Financier' : 'Financial Summary', language === 'fr' ? 'Hors TVA' : 'Before VAT', language === 'fr' ? 'TVA 5.5%' : 'VAT 5.5%', language === 'fr' ? 'Avec TVA' : 'With VAT']],
     body: summaryRows,
-    bodyStyles: (data: any) => {
+    didParseCell: (data: any) => {
       // Copay row is the last row
-      if (data.row.index === summaryRows.length - 1) {
-        return { fillColor: [254, 243, 199], fontStyle: 'bold' };
+      if (data.row.index === summaryRows.length - 1 && data.section === 'body') {
+        data.cell.styles.fillColor = [254, 243, 199];
+        data.cell.styles.fontStyle = 'bold';
       }
-      return {};
     },
   });
 
@@ -695,14 +695,13 @@ function addFinancialSummaryToPage(
     head: [[language === 'fr' ? 'Résumé Financier' : 'Financial Summary', language === 'fr' ? 'Hors TVA' : 'Before VAT', language === 'fr' ? 'TVA 5.5%' : 'VAT 5.5%', language === 'fr' ? 'Avec TVA' : 'With VAT']],
     body: summaryRows,
     headStyles: { fontSize: 8 },
-    bodyStyles: (data: any) => {
-      const styles: any = { fontSize: 7 };
+    bodyStyles: { fontSize: 7 },
+    didParseCell: (data: any) => {
       // Copay row is the last row
-      if (data.row.index === summaryRows.length - 1) {
-        styles.fillColor = [254, 243, 199];
-        styles.fontStyle = 'bold';
+      if (data.row.index === summaryRows.length - 1 && data.section === 'body') {
+        data.cell.styles.fillColor = [254, 243, 199];
+        data.cell.styles.fontStyle = 'bold';
       }
-      return styles;
     },
   });
 
