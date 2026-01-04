@@ -755,7 +755,7 @@ export default function DashboardPage() {
             >
               <Calendar className="inline-block mr-1 sm:mr-2" size={16} />
               <span className="hidden sm:inline">{t('dashboard.calendarView')}</span>
-              <span className="sm:hidden">Calendar</span>
+              <span className="sm:hidden">{language === 'fr' ? 'Calendrier' : 'Calendar'}</span>
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -767,7 +767,7 @@ export default function DashboardPage() {
             >
               <Clock className="inline-block mr-1 sm:mr-2" size={16} />
               <span className="hidden sm:inline">{t('dashboard.checkInHistory')}</span>
-              <span className="sm:hidden">History</span>
+              <span className="sm:hidden">{language === 'fr' ? 'Historique' : 'History'}</span>
             </button>
             <button
               onClick={() => setActiveTab('financial')}
@@ -779,7 +779,7 @@ export default function DashboardPage() {
             >
               <Euro className="inline-block mr-1 sm:mr-2" size={16} />
               <span className="hidden sm:inline">{t('dashboard.financialReview')}</span>
-              <span className="sm:hidden">Financial</span>
+              <span className="sm:hidden">{language === 'fr' ? 'Financier' : 'Financial'}</span>
             </button>
             <button
               onClick={() => setActiveTab('info')}
@@ -790,7 +790,8 @@ export default function DashboardPage() {
               }`}
             >
               <Info className="inline-block mr-1 sm:mr-2" size={16} />
-              Info
+              <span className="hidden sm:inline">Info</span>
+              <span className="sm:hidden">{language === 'fr' ? 'Info' : 'Info'}</span>
             </button>
           </div>
         </div>
@@ -828,8 +829,10 @@ export default function DashboardPage() {
 
             {/* Day Header */}
             <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-              <h2 className="text-3xl font-bold text-gray-800">
-                {format(selectedDayView.date, 'EEEE, MMMM d, yyyy')}
+              <h2 className="text-3xl font-bold text-gray-800 capitalize">
+                {format(selectedDayView.date, 'EEEE, MMMM d, yyyy', {
+                  locale: language === 'fr' ? fr : enUS
+                })}
               </h2>
               <div className="mt-4 flex flex-wrap items-center gap-6">
                 <div className="flex items-center gap-2">
