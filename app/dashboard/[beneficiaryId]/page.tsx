@@ -56,6 +56,7 @@ type Elderly = {
   id: string;
   name: string;
   qr_code: string;
+  nfc_secret: string;
   address: string;
   country?: string;
   currency?: string;
