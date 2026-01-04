@@ -114,7 +114,7 @@ export default function DailyNoteModal({
               {language === 'fr' ? 'Général' : 'General'}
             </option>
             <option value="no-show">
-              {language === 'fr' ? 'Non-arrivé' : 'No Show'}
+              {language === 'fr' ? 'Aucune présence' : 'No Show'}
             </option>
             <option value="late-arrival">
               {language === 'fr' ? 'Arrivé en retard' : 'Late Arrival'}

@@ -6,6 +6,7 @@ import { User, Clock, Euro, CheckCircle, XCircle } from 'lucide-react';
 import { decimalToHHMM, formatNumber } from '@/lib/time-utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getColor, hexToRgba } from '@/lib/caregiver-colors';
+import { getHolidayMajoration } from '@/lib/holiday-rates';
 
 type CheckInOut = {
   id: string;
@@ -22,10 +23,12 @@ type CheckInOut = {
 type CaregiverSummary = {
   name: string;
   regularHours: number;
-  holidayHours: number;
+  holiday25Hours: number;
+  holiday100Hours: number;
   totalHours: number;
   regularAmount: number;
-  holidayAmount: number;
+  holiday25Amount: number;
+  holiday100Amount: number;
   totalAmount: number;
 };
 
@@ -57,31 +60,35 @@ type CaregiverBreakdownProps = {
   checkIns: CheckInOut[];
   selectedMonth: Date;
   regularRate: number;
-  holidayRate: number;
   currency: string;
   copayPercentage: number;
   caregiverColors: Map<string, string>;
   dailyNotes: DailyNote[];
+  timezone: string;
 };
 
 export default function CaregiverBreakdown({
   checkIns,
   selectedMonth,
   regularRate,
-  holidayRate,
   currency,
   copayPercentage,
   caregiverColors,
   dailyNotes,
+  timezone,
 }: CaregiverBreakdownProps) {
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
+
+  // Calculate dynamic rates
+  const rate25 = regularRate * 1.25;
+  const rate100 = regularRate * 2.0;
 
   // Get all unique caregiver names for color fallback
   const allCaregiverNames = Array.from(new Set(checkIns.map(ci => ci.caregiver_name)));
 
   const calculateHoursPerCaregiver = (): CaregiverSummary[] => {
-    const caregiverMap = new Map<string, { regularHours: number; holidayHours: number }>();
+    const caregiverMap = new Map<string, { regularHours: number; holiday25Hours: number; holiday100Hours: number }>();
 
     // Group check-ins by caregiver
     const sorted = [...checkIns].sort((a, b) =>
@@ -119,45 +126,40 @@ export default function CaregiverBreakdown({
         processed.add(checkOut.id);
 
         if (!caregiverMap.has(caregiverName)) {
-          caregiverMap.set(caregiverName, { regularHours: 0, holidayHours: 0 });
+          caregiverMap.set(caregiverName, { regularHours: 0, holiday25Hours: 0, holiday100Hours: 0 });
         }
 
         const stats = caregiverMap.get(caregiverName)!;
 
-        // Calculate holiday hours (simplified - just checking if after 8 PM or Sunday)
-        // TODO: Add French holidays detection
-        const dayOfWeek = start.getDay(); // 0 = Sunday
-        const isSunday = dayOfWeek === 0;
+        // Check for holiday majoration
+        const dateStr = format(start, 'yyyy-MM-dd');
+        const publicHolidayMajoration = getHolidayMajoration(dateStr);
+        const isSunday = start.getDay() === 0;
 
-        if (isSunday) {
-          // All hours on Sunday are holiday
-          stats.holidayHours += totalMinutes / 60;
-        } else {
-          // Check if shift crosses 8 PM (20:00)
-          const startHour = start.getHours();
-          const endHour = end.getHours();
-          const endMinute = end.getMinutes();
+        // If it's May 1st or Dec 25th (100% majoration holidays)
+        if (publicHolidayMajoration === 1.0) {
+          stats.holiday100Hours += totalMinutes / 60;
+        }
+        // If it's another public holiday or Sunday (25% majoration)
+        else if (publicHolidayMajoration === 0.25 || isSunday) {
+          stats.holiday25Hours += totalMinutes / 60;
+        }
+        // Otherwise, check for after 8pm (20:00) hours
+        else {
+          const eveningStart = new Date(start);
+          eveningStart.setHours(20, 0, 0, 0);
 
-          if (endHour >= 20 || (endHour === 19 && endMinute > 0)) {
-            // Shift includes evening hours
-            const eveningStart = new Date(start);
-            eveningStart.setHours(20, 0, 0, 0);
-
-            if (start < eveningStart && end > eveningStart) {
-              // Shift crosses 8 PM boundary
-              const regularMinutes = (eveningStart.getTime() - start.getTime()) / (1000 * 60);
-              const holidayMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
-              stats.regularHours += regularMinutes / 60;
-              stats.holidayHours += holidayMinutes / 60;
-            } else if (start >= eveningStart) {
-              // Entire shift is after 8 PM
-              stats.holidayHours += totalMinutes / 60;
-            } else {
-              // Shift ends before 8 PM
-              stats.regularHours += totalMinutes / 60;
-            }
+          if (start < eveningStart && end > eveningStart) {
+            // Shift crosses 8 PM boundary
+            const regularMinutes = (eveningStart.getTime() - start.getTime()) / (1000 * 60);
+            const holiday25Minutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+            stats.regularHours += regularMinutes / 60;
+            stats.holiday25Hours += holiday25Minutes / 60;
+          } else if (start >= eveningStart) {
+            // Entire shift is after 8 PM (25% majoration)
+            stats.holiday25Hours += totalMinutes / 60;
           } else {
-            // Normal hours
+            // Regular hours (ends before 8 PM)
             stats.regularHours += totalMinutes / 60;
           }
         }
@@ -168,17 +170,20 @@ export default function CaregiverBreakdown({
     const summaries: CaregiverSummary[] = [];
     caregiverMap.forEach((stats, name) => {
       const regularAmount = stats.regularHours * regularRate;
-      const holidayAmount = stats.holidayHours * holidayRate;
-      const totalAmount = regularAmount + holidayAmount;
-      const totalHours = stats.regularHours + stats.holidayHours;
+      const holiday25Amount = stats.holiday25Hours * rate25;
+      const holiday100Amount = stats.holiday100Hours * rate100;
+      const totalAmount = regularAmount + holiday25Amount + holiday100Amount;
+      const totalHours = stats.regularHours + stats.holiday25Hours + stats.holiday100Hours;
 
       summaries.push({
         name,
         regularHours: stats.regularHours,
-        holidayHours: stats.holidayHours,
+        holiday25Hours: stats.holiday25Hours,
+        holiday100Hours: stats.holiday100Hours,
         totalHours,
         regularAmount,
-        holidayAmount,
+        holiday25Amount,
+        holiday100Amount,
         totalAmount,
       });
     });
@@ -253,13 +258,15 @@ export default function CaregiverBreakdown({
   const totals = summaries.reduce(
     (acc, summary) => ({
       regularHours: acc.regularHours + summary.regularHours,
-      holidayHours: acc.holidayHours + summary.holidayHours,
+      holiday25Hours: acc.holiday25Hours + summary.holiday25Hours,
+      holiday100Hours: acc.holiday100Hours + summary.holiday100Hours,
       totalHours: acc.totalHours + summary.totalHours,
       regularAmount: acc.regularAmount + summary.regularAmount,
-      holidayAmount: acc.holidayAmount + summary.holidayAmount,
+      holiday25Amount: acc.holiday25Amount + summary.holiday25Amount,
+      holiday100Amount: acc.holiday100Amount + summary.holiday100Amount,
       totalAmount: acc.totalAmount + summary.totalAmount,
     }),
-    { regularHours: 0, holidayHours: 0, totalHours: 0, regularAmount: 0, holidayAmount: 0, totalAmount: 0 }
+    { regularHours: 0, holiday25Hours: 0, holiday100Hours: 0, totalHours: 0, regularAmount: 0, holiday25Amount: 0, holiday100Amount: 0, totalAmount: 0 }
   );
 
   return (
@@ -278,7 +285,7 @@ export default function CaregiverBreakdown({
           {/* Regular Hours Table */}
           <div className="mb-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              {language === 'fr' ? 'Montant Normal HT' : 'Regular Amount (Before Tax)'} - {currency}{formatNumber(regularRate, 2, language)}/h
+              {language === 'fr' ? 'Heures Normales HT' : 'Regular Hours (Before Tax)'} - {currency}{formatNumber(regularRate, 2, language)}/h
             </h3>
 
             <div className="md:hidden text-xs text-gray-500 mb-2 text-center">
@@ -295,14 +302,12 @@ export default function CaregiverBreakdown({
                     <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
                       <div className="md:whitespace-nowrap">
                         <div>{language === 'fr' ? 'Heures' : 'Hours'}</div>
-                        <div>{language === 'fr' ? 'Normales' : 'Regular'}</div>
                       </div>
                       <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
                     </th>
                     <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
                       <div className="md:whitespace-nowrap">
                         <div>{language === 'fr' ? 'Montant' : 'Amount'}</div>
-                        <div>{language === 'fr' ? 'Normal' : 'Regular'}</div>
                       </div>
                     </th>
                   </tr>
@@ -336,7 +341,7 @@ export default function CaregiverBreakdown({
                   {/* Total Hours Row */}
                   <tr className="border-t border-gray-300 bg-blue-50">
                     <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-blue-50 w-1 whitespace-nowrap">
-                      {language === 'fr' ? 'Total Heures' : 'Total Hours'}
+                      {language === 'fr' ? 'Total' : 'Total'}
                     </td>
                     <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
                       <div>{formatNumber(totals.regularHours, 2, language)}h</div>
@@ -360,7 +365,7 @@ export default function CaregiverBreakdown({
                   {/* Grand Total Row */}
                   <tr className="border-t-2 border-gray-400 bg-green-50">
                     <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base whitespace-nowrap">
-                      {language === 'fr' ? 'TOTAL GÉNÉRAL' : 'GRAND TOTAL'}
+                      {language === 'fr' ? 'TOTAL TTC' : 'TOTAL INC. VAT'}
                     </td>
                     <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl w-1 whitespace-nowrap">
                       {currency}{formatNumber(totals.regularAmount * 1.055, 2, language)}
@@ -371,12 +376,17 @@ export default function CaregiverBreakdown({
             </div>
           </div>
 
-          {/* Holiday Hours Table - Only show if there are holiday hours */}
-          {totals.holidayHours > 0 && (
+          {/* Holiday 25% Hours Table - Only show if there are holiday25 hours */}
+          {totals.holiday25Hours > 0 && (
             <div className="mb-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                {language === 'fr' ? 'Montant Majoré HT' : 'Holiday Amount (Before Tax)'} - {currency}{formatNumber(holidayRate, 2, language)}/h
+                {language === 'fr' ? 'Heures Majorées +25% HT' : 'Holiday Hours +25% (Before Tax)'} - {currency}{formatNumber(rate25, 2, language)}/h
               </h3>
+              <p className="text-sm text-gray-600 mb-3">
+                {language === 'fr'
+                  ? 'Jours fériés, dimanches et après 20h00'
+                  : 'Public holidays, Sundays, and after 8:00 PM'}
+              </p>
 
               <div className="md:hidden text-xs text-gray-500 mb-2 text-center">
                 ← Swipe to see all columns →
@@ -392,20 +402,18 @@ export default function CaregiverBreakdown({
                       <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
                         <div className="md:whitespace-nowrap">
                           <div>{language === 'fr' ? 'Heures' : 'Hours'}</div>
-                          <div>{language === 'fr' ? 'Majorées' : 'Holiday'}</div>
                         </div>
                         <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
                       </th>
                       <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
                         <div className="md:whitespace-nowrap">
                           <div>{language === 'fr' ? 'Montant' : 'Amount'}</div>
-                          <div>{language === 'fr' ? 'Majoré' : 'Holiday'}</div>
                         </div>
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {summaries.filter(s => s.holidayHours > 0).map((summary, idx) => {
+                    {summaries.filter(s => s.holiday25Hours > 0).map((summary, idx) => {
                       const color = getColor(summary.name, caregiverColors, allCaregiverNames);
                       return (
                         <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
@@ -421,26 +429,26 @@ export default function CaregiverBreakdown({
                             </span>
                           </td>
                         <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                          <div>{formatNumber(summary.holidayHours, 2, language)}h</div>
-                          <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.holidayHours)}</div>
+                          <div>{formatNumber(summary.holiday25Hours, 2, language)}h</div>
+                          <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.holiday25Hours)}</div>
                         </td>
                         <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                          {currency}{formatNumber(summary.holidayAmount, 2, language)}
+                          {currency}{formatNumber(summary.holiday25Amount, 2, language)}
                         </td>
                       </tr>
                     );
                     })}
                     {/* Total Hours Row */}
-                    <tr className="border-t border-gray-300 bg-blue-50">
-                      <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-blue-50 w-1 whitespace-nowrap">
-                        {language === 'fr' ? 'Total Heures' : 'Total Hours'}
+                    <tr className="border-t border-gray-300 bg-yellow-50">
+                      <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-yellow-50 w-1 whitespace-nowrap">
+                        {language === 'fr' ? 'Total' : 'Total'}
                       </td>
                       <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
-                        <div>{formatNumber(totals.holidayHours, 2, language)}h</div>
-                        <div className="text-[10px] md:text-xs text-gray-600">{decimalToHHMM(totals.holidayHours)}</div>
+                        <div>{formatNumber(totals.holiday25Hours, 2, language)}h</div>
+                        <div className="text-[10px] md:text-xs text-gray-600">{decimalToHHMM(totals.holiday25Hours)}</div>
                       </td>
                       <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
-                        {currency}{formatNumber(totals.holidayAmount, 2, language)}
+                        {currency}{formatNumber(totals.holiday25Amount, 2, language)}
                       </td>
                     </tr>
                     {/* TVA Row */}
@@ -449,7 +457,7 @@ export default function CaregiverBreakdown({
                         {language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}
                       </td>
                       <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                        {currency}{formatNumber(totals.holidayAmount * 0.055, 2, language)}
+                        {currency}{formatNumber(totals.holiday25Amount * 0.055, 2, language)}
                       </td>
                     </tr>
                   </tbody>
@@ -457,10 +465,111 @@ export default function CaregiverBreakdown({
                     {/* Grand Total Row */}
                     <tr className="border-t-2 border-gray-400 bg-green-50">
                       <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base whitespace-nowrap">
-                        {language === 'fr' ? 'TOTAL GÉNÉRAL' : 'GRAND TOTAL'}
+                        {language === 'fr' ? 'TOTAL TTC' : 'TOTAL INC. VAT'}
                       </td>
                       <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl w-1 whitespace-nowrap">
-                        {currency}{formatNumber(totals.holidayAmount * 1.055, 2, language)}
+                        {currency}{formatNumber(totals.holiday25Amount * 1.055, 2, language)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Holiday 100% Hours Table - Only show if there are holiday100 hours */}
+          {totals.holiday100Hours > 0 && (
+            <div className="mb-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                {language === 'fr' ? 'Heures Majorées +100% HT' : 'Holiday Hours +100% (Before Tax)'} - {currency}{formatNumber(rate100, 2, language)}/h
+              </h3>
+              <p className="text-sm text-gray-600 mb-3">
+                {language === 'fr'
+                  ? '1er mai et 25 décembre uniquement'
+                  : 'May 1st and December 25th only'}
+              </p>
+
+              <div className="md:hidden text-xs text-gray-500 mb-2 text-center">
+                ← Swipe to see all columns →
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full md:min-w-[600px]">
+                  <thead>
+                    <tr className="border-b-2 border-gray-300">
+                      <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10">
+                        {t('financial.caregiver')}
+                      </th>
+                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
+                        <div className="md:whitespace-nowrap">
+                          <div>{language === 'fr' ? 'Heures' : 'Hours'}</div>
+                        </div>
+                        <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
+                      </th>
+                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
+                        <div className="md:whitespace-nowrap">
+                          <div>{language === 'fr' ? 'Montant' : 'Amount'}</div>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summaries.filter(s => s.holiday100Hours > 0).map((summary, idx) => {
+                      const color = getColor(summary.name, caregiverColors, allCaregiverNames);
+                      return (
+                        <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
+                          <td className="py-2 md:py-3 px-1 md:px-2 font-medium text-xs md:text-sm sticky left-0 bg-white w-1 whitespace-nowrap">
+                            <span
+                              className="px-2 py-1 rounded font-semibold"
+                              style={{
+                                color: color,
+                                backgroundColor: hexToRgba(color, 0.15)
+                              }}
+                            >
+                              {summary.name}
+                            </span>
+                          </td>
+                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
+                          <div>{formatNumber(summary.holiday100Hours, 2, language)}h</div>
+                          <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.holiday100Hours)}</div>
+                        </td>
+                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
+                          {currency}{formatNumber(summary.holiday100Amount, 2, language)}
+                        </td>
+                      </tr>
+                    );
+                    })}
+                    {/* Total Hours Row */}
+                    <tr className="border-t border-gray-300 bg-red-50">
+                      <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-red-50 w-1 whitespace-nowrap">
+                        {language === 'fr' ? 'Total' : 'Total'}
+                      </td>
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
+                        <div>{formatNumber(totals.holiday100Hours, 2, language)}h</div>
+                        <div className="text-[10px] md:text-xs text-gray-600">{decimalToHHMM(totals.holiday100Hours)}</div>
+                      </td>
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
+                        {currency}{formatNumber(totals.holiday100Amount, 2, language)}
+                      </td>
+                    </tr>
+                    {/* TVA Row */}
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <td colSpan={2} className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-600 text-xs md:text-sm whitespace-nowrap">
+                        {language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}
+                      </td>
+                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
+                        {currency}{formatNumber(totals.holiday100Amount * 0.055, 2, language)}
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    {/* Grand Total Row */}
+                    <tr className="border-t-2 border-gray-400 bg-green-50">
+                      <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base whitespace-nowrap">
+                        {language === 'fr' ? 'TOTAL TTC' : 'TOTAL INC. VAT'}
+                      </td>
+                      <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl w-1 whitespace-nowrap">
+                        {currency}{formatNumber(totals.holiday100Amount * 1.055, 2, language)}
                       </td>
                     </tr>
                   </tfoot>
@@ -620,7 +729,7 @@ export default function CaregiverBreakdown({
             // Translation mapping and order
             const noteTypesOrdered = [
               { key: 'complaint', fr: 'Plainte', en: 'Complaint' },
-              { key: 'no-show', fr: 'Non-arrivé', en: 'No Show' },
+              { key: 'no-show', fr: 'Aucune présence', en: 'No Show' },
               { key: 'late-arrival', fr: 'Arrivé en retard', en: 'Late Arrival' },
               { key: 'modification', fr: 'Modification', en: 'Modification' },
               { key: 'cancellation', fr: 'Annulation', en: 'Cancellation' },
@@ -671,21 +780,44 @@ export default function CaregiverBreakdown({
               <Euro size={16} className="text-blue-600 md:w-5 md:h-5" />
               {t('financial.rateInfo')}
             </h3>
-            <div className="grid md:grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm">
+            <div className="grid md:grid-cols-3 gap-3 md:gap-4 text-xs md:text-sm">
               <div>
-                <p className="text-gray-600">{t('financial.regularRate')}: <span className="font-semibold text-gray-800">{currency}{formatNumber(regularRate, 2, language)}{t('financial.perHour')}</span></p>
-                <p className="text-gray-600 mt-1">{t('financial.appliedTo')}: {t('financial.weekdaysBefore8pm')}</p>
+                <p className="text-gray-600">
+                  {language === 'fr' ? 'Tarif Normal (HT)' : 'Regular Rate (Before VAT)'}:
+                  <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(regularRate, 2, language)}/h</span>
+                </p>
+                <p className="text-gray-600 mt-1">
+                  {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? 'Jours de semaine avant 20h' : 'Weekdays before 8 PM'}
+                </p>
               </div>
               <div>
-                <p className="text-gray-600">{t('financial.holidayRate')}: <span className="font-semibold text-gray-800">{currency}{formatNumber(holidayRate, 2, language)}{t('financial.perHour')}</span></p>
-                <p className="text-gray-600 mt-1">{t('financial.appliedTo')}: {t('financial.sundaysHolidaysAfter8pm')}</p>
+                <p className="text-gray-600">
+                  {language === 'fr' ? 'Tarif Majoré +25% (HT)' : 'Holiday Rate +25% (Before VAT)'}:
+                  <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(rate25, 2, language)}/h</span>
+                </p>
+                <p className="text-gray-600 mt-1">
+                  {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? 'Jours fériés, dimanches, après 20h' : 'Holidays, Sundays, after 8 PM'}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-600">
+                  {language === 'fr' ? 'Tarif Majoré +100% (HT)' : 'Holiday Rate +100% (Before VAT)'}:
+                  <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(rate100, 2, language)}/h</span>
+                </p>
+                <p className="text-gray-600 mt-1">
+                  {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? '1er mai et 25 décembre' : 'May 1st and Dec 25th'}
+                </p>
               </div>
             </div>
           </div>
 
           <div className="mt-4 text-[10px] md:text-xs text-gray-500">
             <p>{t('financial.verificationNote')}</p>
-            <p className="mt-1">{t('financial.holidayDetectionNote')}</p>
+            <p className="mt-1">
+              {language === 'fr'
+                ? 'Les jours fériés français pris en compte : 1er janvier, 1er mai, 8 mai, 14 juillet, 15 août, 1er novembre, 11 novembre, 25 décembre.'
+                : 'French public holidays accounted for: January 1, May 1, May 8, July 14, August 15, November 1, November 11, December 25.'}
+            </p>
           </div>
         </>
       )}

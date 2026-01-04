@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import { exportFinancialSummaryToCSV, exportDetailedCheckInsToCSV } from '@/lib/export';
+import { exportFinancialSummaryToPDF, exportDetailedCheckInsToPDF } from '@/lib/pdf-export';
 import { decimalToHHMM } from '@/lib/time-utils';
 import {
   Clock,
@@ -366,6 +367,36 @@ export default function DashboardPage() {
     exportDetailedCheckInsToCSV(checkIns, elderly.name, selectedMonth);
   };
 
+  const exportFinancialSummaryPDF = () => {
+    if (!elderly) return;
+    exportFinancialSummaryToPDF(
+      checkIns,
+      elderly.name,
+      selectedMonth,
+      elderly.regular_rate || 15,
+      elderly.currency || 'EUR',
+      elderly.ticket_moderateur || 0,
+      dailyNotes,
+      language,
+      timezone
+    );
+  };
+
+  const exportDetailedCheckInsPDF = () => {
+    if (!elderly) return;
+    exportDetailedCheckInsToPDF(
+      checkIns,
+      elderly.name,
+      selectedMonth,
+      language,
+      dailyNotes,
+      elderly.regular_rate || 15,
+      elderly.currency || 'EUR',
+      elderly.ticket_moderateur || 0,
+      timezone
+    );
+  };
+
   const calculateDayHours = (dayCheckIns: CheckInOut[], includeTraining: boolean = true) => {
     let totalHours = 0;
     const sorted = [...dayCheckIns].sort((a, b) =>
@@ -609,25 +640,6 @@ export default function DashboardPage() {
                   <span className="hidden sm:inline">{t('common.logout')}</span>
                 </button>
               </div>
-            </div>
-            {/* Bottom row: Export buttons - only on desktop */}
-            <div className="hidden md:flex gap-2">
-              <button
-                onClick={exportFinancialSummary}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                title={t('export.financialSummary')}
-              >
-                <Download size={16} />
-                {t('dashboard.financialSummary')}
-              </button>
-              <button
-                onClick={exportDetailedCheckIns}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
-                title={t('export.detailedLog')}
-              >
-                <Download size={16} />
-                {t('dashboard.detailedLog')}
-              </button>
             </div>
           </div>
         </div>
@@ -1054,15 +1066,26 @@ export default function DashboardPage() {
         {/* Financial Tab */}
         {activeTab === 'financial' && (
           <div className="mb-6">
+            {/* Export Button */}
+            <div className="mb-4 flex justify-end">
+              <button
+                onClick={exportFinancialSummaryPDF}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Download size={20} />
+                {language === 'fr' ? 'Résumé Financier (PDF)' : 'Financial Summary (PDF)'}
+              </button>
+            </div>
+
             <CaregiverBreakdown
               checkIns={checkIns}
               selectedMonth={selectedMonth}
               regularRate={elderly.regular_rate || 15}
-              holidayRate={elderly.holiday_rate || 22.5}
               currency={elderly.currency || 'EUR'}
               copayPercentage={elderly.ticket_moderateur || 0}
               caregiverColors={caregiverColors}
               dailyNotes={dailyNotes}
+              timezone={timezone}
             />
           </div>
         )}
@@ -1396,6 +1419,15 @@ export default function DashboardPage() {
                     }
                     return null;
                   })()}
+                  <button
+                    onClick={exportDetailedCheckInsPDF}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                  >
+                    <Download size={18} />
+                    <span className="whitespace-nowrap">
+                      {language === 'fr' ? 'Historique Détaillé (PDF)' : 'Detailed Log (PDF)'}
+                    </span>
+                  </button>
                 </div>
               </div>
 
