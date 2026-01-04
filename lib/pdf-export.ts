@@ -30,7 +30,6 @@ export function exportFinancialSummaryToPDF(
   beneficiaryName: string,
   selectedMonth: Date,
   regularRate: number,
-  holidayRate: number,
   currency: string,
   copayPercentage: number,
   dailyNotes: DailyNote[],
@@ -294,7 +293,6 @@ export function exportDetailedCheckInsToPDF(
   language: 'fr' | 'en' = 'fr',
   dailyNotes?: DailyNote[],
   regularRate?: number,
-  holidayRate?: number,
   currency?: string,
   copayPercentage?: number,
   timezone: string = 'Europe/Paris'
