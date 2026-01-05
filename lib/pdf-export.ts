@@ -243,7 +243,7 @@ export function exportFinancialSummaryToPDF(
   summaryRows.push([language === 'fr' ? 'Heures Formation' : 'Training Hours', `${totalTrainingHours.toFixed(2)}h`, '', '-']);
   summaryRows.push([language === 'fr' ? 'Montant Total' : 'Total Amount', `${totalAmount.toFixed(2)} ${currency}`, `${vatAmount.toFixed(2)} ${currency}`, `${totalWithVAT.toFixed(2)} ${currency}`]);
   summaryRows.push([language === 'fr' ? 'Prise en Charge' : 'Coverage', `${coverageAmount.toFixed(2)} ${currency}`, `${coverageVAT.toFixed(2)} ${currency}`, `${coverageWithVAT.toFixed(2)} ${currency}`]);
-  summaryRows.push([language === 'fr' ? 'Ticket Modérateur' : 'Co-payment', `${copayAmount.toFixed(2)} ${currency}`, `${copayVAT.toFixed(2)} ${currency}`, `${copayWithVAT.toFixed(2)} ${currency}`]);
+  summaryRows.push([language === 'fr' ? 'Reste à charge' : 'Beneficiary\'s share', `${copayAmount.toFixed(2)} ${currency}`, `${copayVAT.toFixed(2)} ${currency}`, `${copayWithVAT.toFixed(2)} ${currency}`]);
 
   autoTable(doc, {
     startY: currentY,
@@ -689,7 +689,7 @@ function addFinancialSummaryToPage(
   summaryRows.push([language === 'fr' ? 'Heures Formation' : 'Training Hours', `${totalTrainingHours.toFixed(2)}h`, '', '-']);
   summaryRows.push([language === 'fr' ? 'Montant Total' : 'Total Amount', `${totalAmount.toFixed(2)} ${currency}`, `${vatAmount.toFixed(2)} ${currency}`, `${totalWithVAT.toFixed(2)} ${currency}`]);
   summaryRows.push([language === 'fr' ? 'Prise en Charge' : 'Coverage', `${coverageAmount.toFixed(2)} ${currency}`, `${coverageVAT.toFixed(2)} ${currency}`, `${coverageWithVAT.toFixed(2)} ${currency}`]);
-  summaryRows.push([language === 'fr' ? 'Ticket Modérateur' : 'Co-payment', `${copayAmount.toFixed(2)} ${currency}`, `${copayVAT.toFixed(2)} ${currency}`, `${copayWithVAT.toFixed(2)} ${currency}`]);
+  summaryRows.push([language === 'fr' ? 'Reste à charge' : 'Beneficiary\'s share', `${copayAmount.toFixed(2)} ${currency}`, `${copayVAT.toFixed(2)} ${currency}`, `${copayWithVAT.toFixed(2)} ${currency}`]);
 
   autoTable(doc, {
     startY: currentY,

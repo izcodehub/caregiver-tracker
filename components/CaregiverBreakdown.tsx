@@ -704,7 +704,7 @@ export default function CaregiverBreakdown({
                   <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
                     <div>
                       <h3 className="text-base md:text-lg font-semibold text-white">
-                        {language === 'fr' ? 'Reste à Charge' : 'Patient\'s Share'}
+                        {language === 'fr' ? 'Reste à Charge' : 'Beneficiary\'s share'}
                       </h3>
                       <p className="text-xs md:text-sm text-blue-100 mt-1">
                         {language === 'fr'
@@ -728,7 +728,7 @@ export default function CaregiverBreakdown({
                     {/* Copay Column */}
                     <div>
                       <p className="text-xs font-semibold text-blue-100 mb-2">
-                        {language === 'fr' ? 'Reste à Charge' : 'Patient\'s Share'}
+                        {language === 'fr' ? 'Reste à Charge' : 'Beneficiary\'s share'}
                       </p>
                       <div className="space-y-1 text-xs text-white">
                         <div className="flex justify-between">
