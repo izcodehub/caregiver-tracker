@@ -350,9 +350,9 @@ export function exportDetailedCheckInsToPDF(
 
   const tableData: any[] = [];
 
-  // Sort dates descending
+  // Sort dates ascending (oldest first)
   Array.from(allDates)
-    .sort((a, b) => b.localeCompare(a))
+    .sort((a, b) => a.localeCompare(b))
     .forEach(dateStr => {
       const dayCheckIns = grouped[dateStr] || [];
       const dayNote = dailyNotes?.find(note => note.date === dateStr);
