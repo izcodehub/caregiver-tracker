@@ -688,34 +688,89 @@ export default function CaregiverBreakdown({
           )}
 
           {/* Reste à charge (Patient's share) */}
-          {copayPercentage > 0 && (
-            <div className="mt-6 p-4 md:p-6 bg-blue-600 rounded-lg border-2 border-blue-700">
-              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
-                <div>
-                  <h3 className="text-base md:text-lg font-semibold text-white">
-                    {language === 'fr' ? 'Reste à Charge' : 'Patient\'s Share'}
-                  </h3>
-                  <p className="text-xs md:text-sm text-blue-100 mt-1">
-                    {language === 'fr'
-                      ? `Ticket Modérateur: ${formatNumber(copayPercentage, 2, language)}%`
-                      : `Co-payment: ${formatNumber(copayPercentage, 2, language)}%`
-                    }
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl md:text-3xl font-bold text-white">
-                    {currency}{formatNumber(totals.totalAmount * copayPercentage / 100, 2, language)}
-                  </p>
-                  <p className="text-xs md:text-sm text-blue-100 mt-1">
-                    {language === 'fr'
-                      ? `Assurance: ${currency}${formatNumber(totals.totalAmount * (100 - copayPercentage) / 100, 2, language)}`
-                      : `Insurance: ${currency}${formatNumber(totals.totalAmount * (100 - copayPercentage) / 100, 2, language)}`
-                    }
-                  </p>
+          {copayPercentage > 0 && (() => {
+            const totalBeforeTax = totals.totalAmount;
+            const copayBeforeTax = totalBeforeTax * copayPercentage / 100;
+            const coverageBeforeTax = totalBeforeTax * (100 - copayPercentage) / 100;
+            const copayVAT = copayBeforeTax * 0.055;
+            const coverageVAT = coverageBeforeTax * 0.055;
+            const copayWithVAT = copayBeforeTax + copayVAT;
+            const coverageWithVAT = coverageBeforeTax + coverageVAT;
+
+            return (
+              <div className="mt-6 p-4 md:p-6 bg-blue-600 rounded-lg border-2 border-blue-700">
+                <div className="flex flex-col gap-4">
+                  {/* Header */}
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
+                    <div>
+                      <h3 className="text-base md:text-lg font-semibold text-white">
+                        {language === 'fr' ? 'Reste à Charge' : 'Patient\'s Share'}
+                      </h3>
+                      <p className="text-xs md:text-sm text-blue-100 mt-1">
+                        {language === 'fr'
+                          ? `Ticket Modérateur: ${formatNumber(copayPercentage, 2, language)}%`
+                          : `Co-payment: ${formatNumber(copayPercentage, 2, language)}%`
+                        }
+                      </p>
+                    </div>
+                    <div className="text-left md:text-right">
+                      <p className="text-2xl md:text-3xl font-bold text-white">
+                        {currency}{formatNumber(copayWithVAT, 2, language)}
+                      </p>
+                      <p className="text-xs text-blue-100">
+                        {language === 'fr' ? 'Avec TVA' : 'With VAT'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Breakdown Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-blue-500">
+                    {/* Copay Column */}
+                    <div>
+                      <p className="text-xs font-semibold text-blue-100 mb-2">
+                        {language === 'fr' ? 'Reste à Charge' : 'Patient\'s Share'}
+                      </p>
+                      <div className="space-y-1 text-xs text-white">
+                        <div className="flex justify-between">
+                          <span className="text-blue-200">{language === 'fr' ? 'Hors TVA:' : 'Before VAT:'}</span>
+                          <span className="font-semibold">{currency}{formatNumber(copayBeforeTax, 2, language)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-200">TVA 5.5%:</span>
+                          <span className="font-semibold">{currency}{formatNumber(copayVAT, 2, language)}</span>
+                        </div>
+                        <div className="flex justify-between pt-1 border-t border-blue-500">
+                          <span className="text-blue-200">{language === 'fr' ? 'Avec TVA:' : 'With VAT:'}</span>
+                          <span className="font-bold">{currency}{formatNumber(copayWithVAT, 2, language)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Coverage Column */}
+                    <div>
+                      <p className="text-xs font-semibold text-blue-100 mb-2">
+                        {language === 'fr' ? 'Prise en Charge' : 'Coverage'}
+                      </p>
+                      <div className="space-y-1 text-xs text-white">
+                        <div className="flex justify-between">
+                          <span className="text-blue-200">{language === 'fr' ? 'Hors TVA:' : 'Before VAT:'}</span>
+                          <span className="font-semibold">{currency}{formatNumber(coverageBeforeTax, 2, language)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-200">TVA 5.5%:</span>
+                          <span className="font-semibold">{currency}{formatNumber(coverageVAT, 2, language)}</span>
+                        </div>
+                        <div className="flex justify-between pt-1 border-t border-blue-500">
+                          <span className="text-blue-200">{language === 'fr' ? 'Avec TVA:' : 'With VAT:'}</span>
+                          <span className="font-bold">{currency}{formatNumber(coverageWithVAT, 2, language)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Notes Summary */}
           {dailyNotes.length > 0 && (() => {
