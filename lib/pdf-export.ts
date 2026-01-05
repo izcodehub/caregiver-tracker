@@ -59,9 +59,9 @@ export function exportFinancialSummaryToPDF(
   doc.setFontSize(10);
   const rate25 = regularRate * 1.25;
   const rate100 = regularRate * 2.0;
-  doc.text(`${language === 'fr' ? 'Tarif Normal (Hors TVA)' : 'Regular Rate (Before VAT)'}: ${regularRate.toFixed(2)} ${currency}`, 14, 45);
-  doc.text(`${language === 'fr' ? 'Tarif Majoré +25% (Hors TVA)' : 'Holiday Rate +25% (Before VAT)'}: ${rate25.toFixed(2)} ${currency}`, 14, 51);
-  doc.text(`${language === 'fr' ? 'Tarif Majoré +100% (Hors TVA)' : 'Holiday Rate +100% (Before VAT)'}: ${rate100.toFixed(2)} ${currency}`, 14, 57);
+  doc.text(`${language === 'fr' ? 'Tarif Normal (Hors TVA)' : 'Regular Rate (Before VAT)'}: ${regularRate.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours de semaine avant 20h' : 'Applied to: Weekdays before 8pm'}`, 14, 45);
+  doc.text(`${language === 'fr' ? 'Tarif Majoré +25% (Hors TVA)' : 'Holiday Rate +25% (Before VAT)'}: ${rate25.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours fériés, dimanches, après 20h' : 'Applied to: Holidays, Sundays, after 8pm'}`, 14, 51);
+  doc.text(`${language === 'fr' ? 'Tarif Majoré +100% (Hors TVA)' : 'Holiday Rate +100% (Before VAT)'}: ${rate100.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: 1er mai et 25 décembre' : 'Applied to: May 1st and December 25th'}`, 14, 57);
   doc.text(`${language === 'fr' ? 'Ticket Modérateur' : 'Co-payment'}: ${copayPercentage}%`, 14, 63);
 
   // Calculate totals by caregiver - separate regular, 25% majoration, and 100% majoration
@@ -500,9 +500,9 @@ function addFinancialSummaryToPage(
   doc.setFontSize(8);
   const rate25 = regularRate * 1.25;
   const rate100 = regularRate * 2.0;
-  doc.text(`${language === 'fr' ? 'Tarif Normal (Hors TVA)' : 'Regular Rate (Before VAT)'}: ${regularRate.toFixed(2)} ${currency}`, 14, startY + 6);
-  doc.text(`${language === 'fr' ? 'Tarif Majoré +25% (Hors TVA)' : 'Holiday Rate +25% (Before VAT)'}: ${rate25.toFixed(2)} ${currency}`, 14, startY + 10);
-  doc.text(`${language === 'fr' ? 'Tarif Majoré +100% (Hors TVA)' : 'Holiday Rate +100% (Before VAT)'}: ${rate100.toFixed(2)} ${currency}`, 14, startY + 14);
+  doc.text(`${language === 'fr' ? 'Tarif Normal (Hors TVA)' : 'Regular Rate (Before VAT)'}: ${regularRate.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours de semaine avant 20h' : 'Applied to: Weekdays before 8pm'}`, 14, startY + 6);
+  doc.text(`${language === 'fr' ? 'Tarif Majoré +25% (Hors TVA)' : 'Holiday Rate +25% (Before VAT)'}: ${rate25.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours fériés, dimanches, après 20h' : 'Applied to: Holidays, Sundays, after 8pm'}`, 14, startY + 10);
+  doc.text(`${language === 'fr' ? 'Tarif Majoré +100% (Hors TVA)' : 'Holiday Rate +100% (Before VAT)'}: ${rate100.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: 1er mai et 25 décembre' : 'Applied to: May 1st and December 25th'}`, 14, startY + 14);
   doc.text(`${language === 'fr' ? 'Ticket Modérateur' : 'Co-payment'}: ${copayPercentage}%`, 14, startY + 18);
 
   const grouped = groupCheckInsByDate(checkIns, timezone);
