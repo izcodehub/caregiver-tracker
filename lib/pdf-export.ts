@@ -406,15 +406,15 @@ export function exportDetailedCheckInsToPDF(
   });
 
   // Add financial summary at the end if provided
-  if (regularRate && holidayRate && currency !== undefined && copayPercentage !== undefined && dailyNotes) {
+  if (regularRate && currency !== undefined && copayPercentage !== undefined && dailyNotes) {
     const summaryY = (doc as any).lastAutoTable.finalY + 15;
 
     // Check if we need a new page
     if (summaryY > 250) {
       doc.addPage();
-      addFinancialSummaryToPage(doc, 20, checkIns, regularRate, holidayRate, currency, copayPercentage, dailyNotes, language, timezone);
+      addFinancialSummaryToPage(doc, 20, checkIns, regularRate, currency, copayPercentage, dailyNotes, language, timezone);
     } else {
-      addFinancialSummaryToPage(doc, summaryY, checkIns, regularRate, holidayRate, currency, copayPercentage, dailyNotes, language, timezone);
+      addFinancialSummaryToPage(doc, summaryY, checkIns, regularRate, currency, copayPercentage, dailyNotes, language, timezone);
     }
   }
 
@@ -486,7 +486,6 @@ function addFinancialSummaryToPage(
   startY: number,
   checkIns: CheckInOut[],
   regularRate: number,
-  holidayRate: number,
   currency: string,
   copayPercentage: number,
   dailyNotes: DailyNote[],
