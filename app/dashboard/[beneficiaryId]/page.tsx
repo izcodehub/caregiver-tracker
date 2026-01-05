@@ -1216,9 +1216,9 @@ export default function DashboardPage() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-gray-600">{language === 'fr' ? 'Tarifs' : 'Rates'}</div>
                       <div className="font-semibold text-gray-900 break-words">
-                        {language === 'fr' ? 'Normal' : 'Regular'}: {elderly.currency}{elderly.regular_rate}/h
+                        {language === 'fr' ? 'Normal HT' : 'Regular Before VAT'}: {elderly.currency}{elderly.regular_rate.toFixed(2)}/h
                         {' | '}
-                        {language === 'fr' ? 'Férié' : 'Holiday'}: {elderly.currency}{elderly.holiday_rate}/h
+                        {language === 'fr' ? 'Normal TTC' : 'Regular With VAT'}: {elderly.currency}{(elderly.regular_rate * 1.055).toFixed(2)}/h
                       </div>
                     </div>
                   </div>
