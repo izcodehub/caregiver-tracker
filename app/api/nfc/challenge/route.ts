@@ -21,12 +21,23 @@ export async function POST(request: NextRequest) {
     const now = Date.now();
     const secondsElapsed = (now - tapTime) / 1000;
 
+    console.log('[Challenge API] Timestamp validation:');
+    console.log('  Client timestamp:', timestamp);
+    console.log('  Server time:', new Date(now).toISOString());
+    console.log('  Tap time ms:', tapTime);
+    console.log('  Server time ms:', now);
+    console.log('  Seconds elapsed:', secondsElapsed);
+    console.log('  Is valid?', secondsElapsed <= 30 && secondsElapsed >= 0);
+
     if (secondsElapsed > 30 || secondsElapsed < 0) {
+      console.log('[Challenge API] REJECTED - Invalid or expired timestamp');
       return NextResponse.json(
         { success: false, message: 'Invalid or expired timestamp' },
         { status: 400 }
       );
     }
+
+    console.log('[Challenge API] ACCEPTED - Timestamp valid');
 
     // Find beneficiary by QR code and validate secret
     const { data: beneficiary, error } = await supabase

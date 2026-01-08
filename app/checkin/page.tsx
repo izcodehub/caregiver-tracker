@@ -291,8 +291,6 @@ function CheckInContent() {
       const secondsElapsed = (now - tapTime) / 1000;
       const secondsRemaining = (TIME_WINDOW_MINUTES * 60) - secondsElapsed;
 
-      console.log('[Countdown] Timer update - secondsRemaining:', secondsRemaining.toFixed(1));
-
       if (secondsRemaining <= 0) {
         console.log('[Countdown] ⏱️ TIME EXPIRED - blocking form');
         setTimeRemaining(0);
@@ -398,24 +396,17 @@ function CheckInContent() {
 
       if (error) throw error;
 
-      console.log('All check-ins/outs:', checkIns);
-
       // Determine who is currently checked in (looking at ALL history, not just today)
       const activeMap = new Map<string, boolean>();
 
       checkIns?.forEach(ci => {
         const name = ci.caregiver_name;
         const action = ci.action;
-        console.log(`Processing: "${name}" - "${action}" at ${ci.timestamp}`);
 
         if (action === 'check-in') {
           activeMap.set(name, true);
-          console.log(`  ✓ Set "${name}" to ACTIVE`);
         } else if (action === 'check-out') {
           activeMap.set(name, false);
-          console.log(`  ✗ Set "${name}" to INACTIVE`);
-        } else {
-          console.log(`  ? Unknown action: "${action}"`);
         }
       });
 
@@ -424,8 +415,7 @@ function CheckInContent() {
         .filter(([_, isActive]) => isActive)
         .map(([name, _]) => name);
 
-      console.log('Active caregivers map:', Array.from(activeMap.entries()));
-      console.log('Currently active:', active);
+      console.log('[CheckIn] Currently active caregivers:', active);
 
       setActiveCaregivers(active);
 
