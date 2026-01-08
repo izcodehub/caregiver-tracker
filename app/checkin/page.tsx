@@ -931,10 +931,9 @@ function CheckInContent() {
                   {/* Active caregivers optgroup */}
                   {activeCaregivers.length > 0 && (
                     <optgroup label={t('checkIn.activeNow')}>
-                      {activeCaregivers.map(name => {
-                        console.log('Rendering active caregiver:', name);
-                        return <option key={name} value={name}>✓ {name}</option>;
-                      })}
+                      {activeCaregivers.map(name => (
+                        <option key={name} value={name}>✓ {name}</option>
+                      ))}
                     </optgroup>
                   )}
 
@@ -942,11 +941,7 @@ function CheckInContent() {
                   {caregiverSuggestions.filter(name => !activeCaregivers.includes(name)).length > 0 && (
                     <optgroup label={t('checkIn.allCaregivers')}>
                       {caregiverSuggestions
-                        .filter(name => {
-                          const isActive = activeCaregivers.includes(name);
-                          console.log(`Caregiver "${name}" - isActive: ${isActive}`);
-                          return !isActive;
-                        })
+                        .filter(name => !activeCaregivers.includes(name))
                         .map(name => (
                           <option key={name} value={name}>{name}</option>
                         ))}
