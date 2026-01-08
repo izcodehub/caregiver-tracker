@@ -230,17 +230,10 @@ export function exportFinancialSummaryToPDF(
   // Financial summary with VAT
   const summaryRows = [
     [language === 'fr' ? 'Heures Normales' : 'Regular Hours', `${totalRegularHours.toFixed(2)}h - ${totalRegularAmount.toFixed(2)} ${currency}`, `${regularVAT.toFixed(2)} ${currency}`, `${regularWithVAT.toFixed(2)} ${currency}`],
+    [language === 'fr' ? 'Heures Fériées (+25%)' : 'Holiday Hours (+25%)', `${total25HolidayHours.toFixed(2)}h - ${total25HolidayAmount.toFixed(2)} ${currency}`, `${holiday25VAT.toFixed(2)} ${currency}`, `${holiday25WithVAT.toFixed(2)} ${currency}`],
+    [language === 'fr' ? 'Heures Fériées (+100%)' : 'Holiday Hours (+100%)', `${total100HolidayHours.toFixed(2)}h - ${total100HolidayAmount.toFixed(2)} ${currency}`, `${holiday100VAT.toFixed(2)} ${currency}`, `${holiday100WithVAT.toFixed(2)} ${currency}`],
+    [language === 'fr' ? 'Heures Formation' : 'Training Hours', `${totalTrainingHours.toFixed(2)}h`, '', '-'],
   ];
-
-  if (total25HolidayHours > 0) {
-    summaryRows.push([language === 'fr' ? 'Heures Fériées (+25%)' : 'Holiday Hours (+25%)', `${total25HolidayHours.toFixed(2)}h - ${total25HolidayAmount.toFixed(2)} ${currency}`, `${holiday25VAT.toFixed(2)} ${currency}`, `${holiday25WithVAT.toFixed(2)} ${currency}`]);
-  }
-
-  if (total100HolidayHours > 0) {
-    summaryRows.push([language === 'fr' ? 'Heures Fériées (+100%)' : 'Holiday Hours (+100%)', `${total100HolidayHours.toFixed(2)}h - ${total100HolidayAmount.toFixed(2)} ${currency}`, `${holiday100VAT.toFixed(2)} ${currency}`, `${holiday100WithVAT.toFixed(2)} ${currency}`]);
-  }
-
-  summaryRows.push([language === 'fr' ? 'Heures Formation' : 'Training Hours', `${totalTrainingHours.toFixed(2)}h`, '', '-']);
   summaryRows.push([language === 'fr' ? 'Montant Total' : 'Total Amount', `${totalAmount.toFixed(2)} ${currency}`, `${vatAmount.toFixed(2)} ${currency}`, `${totalWithVAT.toFixed(2)} ${currency}`]);
   summaryRows.push([language === 'fr' ? 'Prise en Charge' : 'Coverage', `${coverageAmount.toFixed(2)} ${currency}`, `${coverageVAT.toFixed(2)} ${currency}`, `${coverageWithVAT.toFixed(2)} ${currency}`]);
   summaryRows.push([language === 'fr' ? 'Reste à charge' : 'Beneficiary\'s share', `${copayAmount.toFixed(2)} ${currency}`, `${copayVAT.toFixed(2)} ${currency}`, `${copayWithVAT.toFixed(2)} ${currency}`]);
@@ -676,17 +669,10 @@ function addFinancialSummaryToPage(
   // Financial summary with VAT
   const summaryRows = [
     [language === 'fr' ? 'Heures Normales' : 'Regular Hours', `${totalRegularHours.toFixed(2)}h - ${totalRegularAmount.toFixed(2)} ${currency}`, `${regularVAT.toFixed(2)} ${currency}`, `${regularWithVAT.toFixed(2)} ${currency}`],
+    [language === 'fr' ? 'Heures Fériées (+25%)' : 'Holiday Hours (+25%)', `${total25HolidayHours.toFixed(2)}h - ${total25HolidayAmount.toFixed(2)} ${currency}`, `${holiday25VAT.toFixed(2)} ${currency}`, `${holiday25WithVAT.toFixed(2)} ${currency}`],
+    [language === 'fr' ? 'Heures Fériées (+100%)' : 'Holiday Hours (+100%)', `${total100HolidayHours.toFixed(2)}h - ${total100HolidayAmount.toFixed(2)} ${currency}`, `${holiday100VAT.toFixed(2)} ${currency}`, `${holiday100WithVAT.toFixed(2)} ${currency}`],
+    [language === 'fr' ? 'Heures Formation' : 'Training Hours', `${totalTrainingHours.toFixed(2)}h`, '', '-'],
   ];
-
-  if (total25HolidayHours > 0) {
-    summaryRows.push([language === 'fr' ? 'Heures Fériées (+25%)' : 'Holiday Hours (+25%)', `${total25HolidayHours.toFixed(2)}h - ${total25HolidayAmount.toFixed(2)} ${currency}`, `${holiday25VAT.toFixed(2)} ${currency}`, `${holiday25WithVAT.toFixed(2)} ${currency}`]);
-  }
-
-  if (total100HolidayHours > 0) {
-    summaryRows.push([language === 'fr' ? 'Heures Fériées (+100%)' : 'Holiday Hours (+100%)', `${total100HolidayHours.toFixed(2)}h - ${total100HolidayAmount.toFixed(2)} ${currency}`, `${holiday100VAT.toFixed(2)} ${currency}`, `${holiday100WithVAT.toFixed(2)} ${currency}`]);
-  }
-
-  summaryRows.push([language === 'fr' ? 'Heures Formation' : 'Training Hours', `${totalTrainingHours.toFixed(2)}h`, '', '-']);
   summaryRows.push([language === 'fr' ? 'Montant Total' : 'Total Amount', `${totalAmount.toFixed(2)} ${currency}`, `${vatAmount.toFixed(2)} ${currency}`, `${totalWithVAT.toFixed(2)} ${currency}`]);
   summaryRows.push([language === 'fr' ? 'Prise en Charge' : 'Coverage', `${coverageAmount.toFixed(2)} ${currency}`, `${coverageVAT.toFixed(2)} ${currency}`, `${coverageWithVAT.toFixed(2)} ${currency}`]);
   summaryRows.push([language === 'fr' ? 'Reste à charge' : 'Beneficiary\'s share', `${copayAmount.toFixed(2)} ${currency}`, `${copayVAT.toFixed(2)} ${currency}`, `${copayWithVAT.toFixed(2)} ${currency}`]);
