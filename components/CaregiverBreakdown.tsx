@@ -1,6 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
+import { utcToZonedTime } from 'date-fns-tz';
 import { fr, enUS } from 'date-fns/locale';
 import { User, Clock, Euro, CheckCircle, XCircle } from 'lucide-react';
 import { decimalToHHMM, formatNumber } from '@/lib/time-utils';
@@ -146,46 +147,51 @@ export default function CaregiverBreakdown({
         }
         // Otherwise, check for time-of-day rates (8 AM - 8 PM regular, before/after 25%)
         else {
-          const morningStart = new Date(start);
+          // Convert to beneficiary's local timezone for time-of-day calculations
+          const startLocal = utcToZonedTime(start, timezone);
+          const endLocal = utcToZonedTime(end, timezone);
+
+          // Create 8 AM and 8 PM boundaries in beneficiary's local time
+          const morningStart = new Date(startLocal);
           morningStart.setHours(8, 0, 0, 0);
-          const eveningStart = new Date(start);
+          const eveningStart = new Date(startLocal);
           eveningStart.setHours(20, 0, 0, 0);
 
           // Calculate minutes in each time period
-          let earlyMorningMinutes = 0;  // Before 8 AM (25%)
-          let regularMinutes = 0;        // 8 AM - 8 PM (regular)
-          let eveningMinutes = 0;        // After 8 PM (25%)
+          let earlyMorningMinutes = 0;  // Before 8 AM local (25%)
+          let regularMinutes = 0;        // 8 AM - 8 PM local (regular)
+          let eveningMinutes = 0;        // After 8 PM local (25%)
 
-          // If shift starts before 8 AM
-          if (start < morningStart) {
-            if (end <= morningStart) {
+          // If shift starts before 8 AM local
+          if (startLocal < morningStart) {
+            if (endLocal <= morningStart) {
               // Entire shift before 8 AM
               earlyMorningMinutes = totalMinutes;
             } else {
               // Shift crosses 8 AM boundary
-              earlyMorningMinutes = (morningStart.getTime() - start.getTime()) / (1000 * 60);
+              earlyMorningMinutes = (morningStart.getTime() - startLocal.getTime()) / (1000 * 60);
 
               // Check if it also crosses 8 PM
-              if (end > eveningStart) {
+              if (endLocal > eveningStart) {
                 regularMinutes = (eveningStart.getTime() - morningStart.getTime()) / (1000 * 60);
-                eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+                eveningMinutes = (endLocal.getTime() - eveningStart.getTime()) / (1000 * 60);
               } else {
-                regularMinutes = (end.getTime() - morningStart.getTime()) / (1000 * 60);
+                regularMinutes = (endLocal.getTime() - morningStart.getTime()) / (1000 * 60);
               }
             }
           }
-          // If shift starts between 8 AM and 8 PM
-          else if (start >= morningStart && start < eveningStart) {
-            if (end <= eveningStart) {
+          // If shift starts between 8 AM and 8 PM local
+          else if (startLocal >= morningStart && startLocal < eveningStart) {
+            if (endLocal <= eveningStart) {
               // Entire shift in regular hours
               regularMinutes = totalMinutes;
             } else {
               // Shift crosses 8 PM boundary
-              regularMinutes = (eveningStart.getTime() - start.getTime()) / (1000 * 60);
-              eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+              regularMinutes = (eveningStart.getTime() - startLocal.getTime()) / (1000 * 60);
+              eveningMinutes = (endLocal.getTime() - eveningStart.getTime()) / (1000 * 60);
             }
           }
-          // If shift starts after 8 PM
+          // If shift starts after 8 PM local
           else {
             eveningMinutes = totalMinutes;
           }

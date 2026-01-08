@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone, utcToZonedTime } from 'date-fns-tz';
 import { getHolidayMajoration, isPublicHoliday } from './holiday-rates';
 
 type CheckInOut = {
@@ -102,39 +102,44 @@ export function exportFinancialSummaryToPDF(
             caregiver25HolidayStats[name].amount += (totalMinutes / 60) * rate25;
           } else {
             // Regular weekday - split by time of day (8 AM - 8 PM regular, before/after 25%)
-            const morningStart = new Date(start);
+            // Convert to beneficiary's local timezone for time-of-day calculations
+            const startLocal = utcToZonedTime(start, timezone);
+            const endLocal = utcToZonedTime(end, timezone);
+
+            // Create 8 AM and 8 PM boundaries in beneficiary's local time
+            const morningStart = new Date(startLocal);
             morningStart.setHours(8, 0, 0, 0);
-            const eveningStart = new Date(start);
+            const eveningStart = new Date(startLocal);
             eveningStart.setHours(20, 0, 0, 0);
 
-            let earlyMorningMinutes = 0;  // Before 8 AM (25%)
-            let regularMinutes = 0;        // 8 AM - 8 PM (regular)
-            let eveningMinutes = 0;        // After 8 PM (25%)
+            let earlyMorningMinutes = 0;  // Before 8 AM local (25%)
+            let regularMinutes = 0;        // 8 AM - 8 PM local (regular)
+            let eveningMinutes = 0;        // After 8 PM local (25%)
 
-            // If shift starts before 8 AM
-            if (start < morningStart) {
-              if (end <= morningStart) {
+            // If shift starts before 8 AM local
+            if (startLocal < morningStart) {
+              if (endLocal <= morningStart) {
                 earlyMorningMinutes = totalMinutes;
               } else {
-                earlyMorningMinutes = (morningStart.getTime() - start.getTime()) / (1000 * 60);
-                if (end > eveningStart) {
+                earlyMorningMinutes = (morningStart.getTime() - startLocal.getTime()) / (1000 * 60);
+                if (endLocal > eveningStart) {
                   regularMinutes = (eveningStart.getTime() - morningStart.getTime()) / (1000 * 60);
-                  eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+                  eveningMinutes = (endLocal.getTime() - eveningStart.getTime()) / (1000 * 60);
                 } else {
-                  regularMinutes = (end.getTime() - morningStart.getTime()) / (1000 * 60);
+                  regularMinutes = (endLocal.getTime() - morningStart.getTime()) / (1000 * 60);
                 }
               }
             }
-            // If shift starts between 8 AM and 8 PM
-            else if (start >= morningStart && start < eveningStart) {
-              if (end <= eveningStart) {
+            // If shift starts between 8 AM and 8 PM local
+            else if (startLocal >= morningStart && startLocal < eveningStart) {
+              if (endLocal <= eveningStart) {
                 regularMinutes = totalMinutes;
               } else {
-                regularMinutes = (eveningStart.getTime() - start.getTime()) / (1000 * 60);
-                eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+                regularMinutes = (eveningStart.getTime() - startLocal.getTime()) / (1000 * 60);
+                eveningMinutes = (endLocal.getTime() - eveningStart.getTime()) / (1000 * 60);
               }
             }
-            // If shift starts after 8 PM
+            // If shift starts after 8 PM local
             else {
               eveningMinutes = totalMinutes;
             }
@@ -589,39 +594,44 @@ function addFinancialSummaryToPage(
             caregiver25HolidayStats[name].amount += (totalMinutes / 60) * rate25;
           } else {
             // Regular weekday - split by time of day (8 AM - 8 PM regular, before/after 25%)
-            const morningStart = new Date(start);
+            // Convert to beneficiary's local timezone for time-of-day calculations
+            const startLocal = utcToZonedTime(start, timezone);
+            const endLocal = utcToZonedTime(end, timezone);
+
+            // Create 8 AM and 8 PM boundaries in beneficiary's local time
+            const morningStart = new Date(startLocal);
             morningStart.setHours(8, 0, 0, 0);
-            const eveningStart = new Date(start);
+            const eveningStart = new Date(startLocal);
             eveningStart.setHours(20, 0, 0, 0);
 
-            let earlyMorningMinutes = 0;  // Before 8 AM (25%)
-            let regularMinutes = 0;        // 8 AM - 8 PM (regular)
-            let eveningMinutes = 0;        // After 8 PM (25%)
+            let earlyMorningMinutes = 0;  // Before 8 AM local (25%)
+            let regularMinutes = 0;        // 8 AM - 8 PM local (regular)
+            let eveningMinutes = 0;        // After 8 PM local (25%)
 
-            // If shift starts before 8 AM
-            if (start < morningStart) {
-              if (end <= morningStart) {
+            // If shift starts before 8 AM local
+            if (startLocal < morningStart) {
+              if (endLocal <= morningStart) {
                 earlyMorningMinutes = totalMinutes;
               } else {
-                earlyMorningMinutes = (morningStart.getTime() - start.getTime()) / (1000 * 60);
-                if (end > eveningStart) {
+                earlyMorningMinutes = (morningStart.getTime() - startLocal.getTime()) / (1000 * 60);
+                if (endLocal > eveningStart) {
                   regularMinutes = (eveningStart.getTime() - morningStart.getTime()) / (1000 * 60);
-                  eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+                  eveningMinutes = (endLocal.getTime() - eveningStart.getTime()) / (1000 * 60);
                 } else {
-                  regularMinutes = (end.getTime() - morningStart.getTime()) / (1000 * 60);
+                  regularMinutes = (endLocal.getTime() - morningStart.getTime()) / (1000 * 60);
                 }
               }
             }
-            // If shift starts between 8 AM and 8 PM
-            else if (start >= morningStart && start < eveningStart) {
-              if (end <= eveningStart) {
+            // If shift starts between 8 AM and 8 PM local
+            else if (startLocal >= morningStart && startLocal < eveningStart) {
+              if (endLocal <= eveningStart) {
                 regularMinutes = totalMinutes;
               } else {
-                regularMinutes = (eveningStart.getTime() - start.getTime()) / (1000 * 60);
-                eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+                regularMinutes = (eveningStart.getTime() - startLocal.getTime()) / (1000 * 60);
+                eveningMinutes = (endLocal.getTime() - eveningStart.getTime()) / (1000 * 60);
               }
             }
-            // If shift starts after 8 PM
+            // If shift starts after 8 PM local
             else {
               eveningMinutes = totalMinutes;
             }
