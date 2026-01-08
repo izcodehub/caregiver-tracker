@@ -64,21 +64,17 @@ function CheckInContent() {
 
     // Reset processed flag if we have new URL parameters
     if (qrCode && secretParam) {
-      console.log('[CheckIn] Resetting hasProcessedParams flag');
+      console.log('[CheckIn] Resetting hasProcessedParams flag - NEW NFC TAP DETECTED');
       hasProcessedParams.current = false;
-      // Reset blocked state for new NFC tap
+      // Reset all state for new NFC tap
       setBlocked(false);
       setError('');
       setValidated(false);
-      // Immediately set new timestamp to prevent countdown timer from showing expired error
-      const newTimestamp = new Date().toISOString();
-      setTapTimestamp(newTimestamp);
-      // Clear old session data to prevent interference
+      setLoading(true); // Keep loading until processing completes
+      // Clear old session data to prevent interference from previous taps
       sessionStorage.removeItem('card_tap_time');
       sessionStorage.removeItem('nfc_qr_code');
       sessionStorage.removeItem('verification_method');
-      // Store new timestamp immediately
-      sessionStorage.setItem('card_tap_time', newTimestamp);
     }
 
     const processParams = () => {
@@ -96,14 +92,15 @@ function CheckInContent() {
         console.log('[CheckIn] NFC/Secret flow detected');
         // NFC tap detected (has secret token)
         const detectedMethod = (method === 'qr' || method === 'nfc') ? method : 'nfc';
+        const newTimestamp = new Date().toISOString();
 
         setBeneficiaryQrCode(qrCode);
         setSecret(secretParam);
         setVerificationMethod(detectedMethod);
-        setTapTimestamp(new Date().toISOString());
+        setTapTimestamp(newTimestamp);
 
-        // Store in sessionStorage for validation
-        sessionStorage.setItem('card_tap_time', new Date().toISOString());
+        // Store in sessionStorage for validation (use the same timestamp)
+        sessionStorage.setItem('card_tap_time', newTimestamp);
         sessionStorage.setItem('nfc_qr_code', qrCode);
         sessionStorage.setItem('verification_method', detectedMethod);
 
@@ -233,7 +230,8 @@ function CheckInContent() {
 
   // Countdown timer for NFC tap expiration
   useEffect(() => {
-    if (!tapTimestamp || !validated) {
+    // Don't start countdown while loading or if not validated
+    if (!tapTimestamp || !validated || loading) {
       setTimeRemaining(null);
       return;
     }
@@ -261,7 +259,7 @@ function CheckInContent() {
     const interval = setInterval(updateTimer, 1000);
 
     return () => clearInterval(interval);
-  }, [tapTimestamp, validated, t]);
+  }, [tapTimestamp, validated, loading, t]);
 
   // Load caregiver names after elderly data is loaded
   useEffect(() => {
