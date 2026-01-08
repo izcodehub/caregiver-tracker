@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
-import { formatInTimeZone, utcToZonedTime } from 'date-fns-tz';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { getHolidayMajoration, isPublicHoliday } from './holiday-rates';
 
 type CheckInOut = {
@@ -103,8 +103,8 @@ export function exportFinancialSummaryToPDF(
           } else {
             // Regular weekday - split by time of day (8 AM - 8 PM regular, before/after 25%)
             // Convert to beneficiary's local timezone for time-of-day calculations
-            const startLocal = utcToZonedTime(start, timezone);
-            const endLocal = utcToZonedTime(end, timezone);
+            const startLocal = toZonedTime(start, timezone);
+            const endLocal = toZonedTime(end, timezone);
 
             // Create 8 AM and 8 PM boundaries in beneficiary's local time
             const morningStart = new Date(startLocal);
@@ -595,8 +595,8 @@ function addFinancialSummaryToPage(
           } else {
             // Regular weekday - split by time of day (8 AM - 8 PM regular, before/after 25%)
             // Convert to beneficiary's local timezone for time-of-day calculations
-            const startLocal = utcToZonedTime(start, timezone);
-            const endLocal = utcToZonedTime(end, timezone);
+            const startLocal = toZonedTime(start, timezone);
+            const endLocal = toZonedTime(end, timezone);
 
             // Create 8 AM and 8 PM boundaries in beneficiary's local time
             const morningStart = new Date(startLocal);

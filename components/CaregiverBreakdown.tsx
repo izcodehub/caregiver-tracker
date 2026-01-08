@@ -1,7 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { utcToZonedTime } from 'date-fns-tz';
+import { toZonedTime } from 'date-fns-tz';
 import { fr, enUS } from 'date-fns/locale';
 import { User, Clock, Euro, CheckCircle, XCircle } from 'lucide-react';
 import { decimalToHHMM, formatNumber } from '@/lib/time-utils';
@@ -148,8 +148,8 @@ export default function CaregiverBreakdown({
         // Otherwise, check for time-of-day rates (8 AM - 8 PM regular, before/after 25%)
         else {
           // Convert to beneficiary's local timezone for time-of-day calculations
-          const startLocal = utcToZonedTime(start, timezone);
-          const endLocal = utcToZonedTime(end, timezone);
+          const startLocal = toZonedTime(start, timezone);
+          const endLocal = toZonedTime(end, timezone);
 
           // Create 8 AM and 8 PM boundaries in beneficiary's local time
           const morningStart = new Date(startLocal);
