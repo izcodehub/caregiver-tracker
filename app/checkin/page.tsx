@@ -66,6 +66,10 @@ function CheckInContent() {
     if (qrCode && secretParam) {
       console.log('[CheckIn] Resetting hasProcessedParams flag');
       hasProcessedParams.current = false;
+      // Reset blocked state for new NFC tap
+      setBlocked(false);
+      setError('');
+      setValidated(false);
     }
 
     const processParams = () => {
@@ -101,6 +105,10 @@ function CheckInContent() {
         requestChallengeToken(qrCode, secretParam, detectedMethod);
       } else if (qrCode && !secretParam) {
         // QR code scan detected (no secret) - geolocation is MANDATORY
+        // Reset blocked state for new QR scan
+        setBlocked(false);
+        setError('');
+
         setBeneficiaryQrCode(qrCode);
         setVerificationMethod('qr');
         setValidated(true); // Allow form to load, but geolocation required
@@ -147,6 +155,7 @@ function CheckInContent() {
         // Valid session exists but secret already cleaned
         setBeneficiaryQrCode(storedQrCode);
         setVerificationMethod(storedMethod || 'nfc');
+        setTapTimestamp(recentTap); // Restore the tap timestamp from session
       }
     };
 
