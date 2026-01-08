@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
     const verificationMethod = method === 'qr' ? 'qr' : 'nfc';
 
     // Verify timestamp is recent (within 30 seconds)
+    // Allow 5 second tolerance for client clock being ahead of server clock
     const tapTime = new Date(timestamp).getTime();
     const now = Date.now();
     const secondsElapsed = (now - tapTime) / 1000;
@@ -27,9 +28,10 @@ export async function POST(request: NextRequest) {
     console.log('  Tap time ms:', tapTime);
     console.log('  Server time ms:', now);
     console.log('  Seconds elapsed:', secondsElapsed);
-    console.log('  Is valid?', secondsElapsed <= 30 && secondsElapsed >= 0);
+    console.log('  Is valid?', secondsElapsed <= 30 && secondsElapsed >= -5);
 
-    if (secondsElapsed > 30 || secondsElapsed < 0) {
+    // Allow -5 to +30 seconds to account for clock drift between client and server
+    if (secondsElapsed > 30 || secondsElapsed < -5) {
       console.log('[Challenge API] REJECTED - Invalid or expired timestamp');
       return NextResponse.json(
         { success: false, message: 'Invalid or expired timestamp' },
