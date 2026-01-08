@@ -1,11 +1,13 @@
 // Utility functions for holiday rate calculations
 
-export function getHolidayMajoration(dateStr: string): number {
-  // Returns the majoration percentage for a given date
-  // 100% for May 1st and Dec 25th
-  // 25% for other holidays and Sundays
-  // 0 for regular days
+export function getHolidayMajoration(dateStr: string, hour?: number): number {
+  // Returns the majoration percentage for a given date and time
+  // 100% for May 1st and Dec 25th (all hours)
+  // 25% for holidays and Sundays (all hours)
+  // 25% for weekdays before 8 AM or after 8 PM
+  // 0 for weekdays 8 AM - 8 PM
   // dateStr is in format 'yyyy-MM-dd'
+  // hour is optional 0-23, if not provided assumes full day
   const [year, monthStr, dayStr] = dateStr.split('-');
   const month = parseInt(monthStr, 10);
   const day = parseInt(dayStr, 10);
@@ -14,12 +16,12 @@ export function getHolidayMajoration(dateStr: string): number {
   const date = new Date(parseInt(year), month - 1, day);
   const isSunday = date.getDay() === 0;
 
-  // Special holidays with 100% majoration
+  // Special holidays with 100% majoration (all hours)
   if ((month === 5 && day === 1) || (month === 12 && day === 25)) {
     return 1.0; // 100% majoration
   }
 
-  // Regular French public holidays with 25% majoration
+  // Regular French public holidays with 25% majoration (all hours)
   const regularHolidays = [
     { month: 1, day: 1 },   // New Year's Day
     { month: 5, day: 8 },   // Victory Day
@@ -33,12 +35,20 @@ export function getHolidayMajoration(dateStr: string): number {
     return 0.25; // 25% majoration
   }
 
-  // Sundays get 25% majoration
+  // Sundays get 25% majoration (all hours)
   if (isSunday) {
     return 0.25; // 25% majoration for Sundays
   }
 
-  return 0; // No majoration (regular day)
+  // Weekdays: check time of day if hour is provided
+  if (hour !== undefined) {
+    // Before 8 AM (0-7) or after 8 PM (20-23) gets 25% majoration
+    if (hour < 8 || hour >= 20) {
+      return 0.25; // 25% majoration for early morning/evening
+    }
+  }
+
+  return 0; // No majoration (regular weekday during 8 AM - 8 PM)
 }
 
 export function isPublicHoliday(dateStr: string): boolean {

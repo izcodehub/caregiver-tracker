@@ -144,24 +144,54 @@ export default function CaregiverBreakdown({
         else if (publicHolidayMajoration === 0.25 || isSunday) {
           stats.holiday25Hours += totalMinutes / 60;
         }
-        // Otherwise, check for after 8pm (20:00) hours
+        // Otherwise, check for time-of-day rates (8 AM - 8 PM regular, before/after 25%)
         else {
+          const morningStart = new Date(start);
+          morningStart.setHours(8, 0, 0, 0);
           const eveningStart = new Date(start);
           eveningStart.setHours(20, 0, 0, 0);
 
-          if (start < eveningStart && end > eveningStart) {
-            // Shift crosses 8 PM boundary
-            const regularMinutes = (eveningStart.getTime() - start.getTime()) / (1000 * 60);
-            const holiday25Minutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
-            stats.regularHours += regularMinutes / 60;
-            stats.holiday25Hours += holiday25Minutes / 60;
-          } else if (start >= eveningStart) {
-            // Entire shift is after 8 PM (25% majoration)
-            stats.holiday25Hours += totalMinutes / 60;
-          } else {
-            // Regular hours (ends before 8 PM)
-            stats.regularHours += totalMinutes / 60;
+          // Calculate minutes in each time period
+          let earlyMorningMinutes = 0;  // Before 8 AM (25%)
+          let regularMinutes = 0;        // 8 AM - 8 PM (regular)
+          let eveningMinutes = 0;        // After 8 PM (25%)
+
+          // If shift starts before 8 AM
+          if (start < morningStart) {
+            if (end <= morningStart) {
+              // Entire shift before 8 AM
+              earlyMorningMinutes = totalMinutes;
+            } else {
+              // Shift crosses 8 AM boundary
+              earlyMorningMinutes = (morningStart.getTime() - start.getTime()) / (1000 * 60);
+
+              // Check if it also crosses 8 PM
+              if (end > eveningStart) {
+                regularMinutes = (eveningStart.getTime() - morningStart.getTime()) / (1000 * 60);
+                eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+              } else {
+                regularMinutes = (end.getTime() - morningStart.getTime()) / (1000 * 60);
+              }
+            }
           }
+          // If shift starts between 8 AM and 8 PM
+          else if (start >= morningStart && start < eveningStart) {
+            if (end <= eveningStart) {
+              // Entire shift in regular hours
+              regularMinutes = totalMinutes;
+            } else {
+              // Shift crosses 8 PM boundary
+              regularMinutes = (eveningStart.getTime() - start.getTime()) / (1000 * 60);
+              eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+            }
+          }
+          // If shift starts after 8 PM
+          else {
+            eveningMinutes = totalMinutes;
+          }
+
+          stats.holiday25Hours += (earlyMorningMinutes + eveningMinutes) / 60;
+          stats.regularHours += regularMinutes / 60;
         }
       }
     });
@@ -842,7 +872,7 @@ export default function CaregiverBreakdown({
                   <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(regularRate, 2, language)}/h</span>
                 </p>
                 <p className="text-gray-600 mt-1">
-                  {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? 'Jours de semaine avant 20h' : 'Weekdays before 8 PM'}
+                  {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? 'Jours de semaine 8h-20h' : 'Weekdays 8 AM - 8 PM'}
                 </p>
               </div>
               <div>
@@ -851,7 +881,7 @@ export default function CaregiverBreakdown({
                   <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(rate25, 2, language)}/h</span>
                 </p>
                 <p className="text-gray-600 mt-1">
-                  {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? 'Jours fériés, dimanches, après 20h' : 'Holidays, Sundays, after 8 PM'}
+                  {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? 'Jours fériés, dimanches, avant 8h ou après 20h' : 'Holidays, Sundays, before 8 AM or after 8 PM'}
                 </p>
               </div>
               <div>

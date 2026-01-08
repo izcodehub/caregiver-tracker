@@ -59,9 +59,9 @@ export function exportFinancialSummaryToPDF(
   doc.setFontSize(10);
   const rate25 = regularRate * 1.25;
   const rate100 = regularRate * 2.0;
-  doc.text(`${language === 'fr' ? 'Tarif Normal (Hors TVA)' : 'Regular Rate (Before VAT)'}: ${regularRate.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours de semaine avant 20h' : 'Applied to: Weekdays before 8pm'}`, 14, 45);
-  doc.text(`${language === 'fr' ? 'Tarif Majoré +25% (Hors TVA)' : 'Holiday Rate +25% (Before VAT)'}: ${rate25.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours fériés, dimanches, après 20h' : 'Applied to: Holidays, Sundays, after 8pm'}`, 14, 51);
-  doc.text(`${language === 'fr' ? 'Tarif Majoré +100% (Hors TVA)' : 'Holiday Rate +100% (Before VAT)'}: ${rate100.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: 1er mai et 25 décembre' : 'Applied to: May 1st and December 25th'}`, 14, 57);
+  doc.text(`${language === 'fr' ? 'Tarif Normal (Hors TVA)' : 'Regular Rate (Before VAT)'}: ${regularRate.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours de semaine 8h-20h' : 'Applied to: Weekdays 8 AM - 8 PM'}`, 14, 45);
+  doc.text(`${language === 'fr' ? 'Tarif Majoré +25% (Hors TVA)' : 'Holiday Rate +25% (Before VAT)'}: ${rate25.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours fériés, dimanches, avant 8h ou après 20h' : 'Applied to: Holidays, Sundays, before 8 AM or after 8 PM'}`, 14, 51);
+  doc.text(`${language === 'fr' ? 'Tarif Majoré +100% (Hors TVA)' : 'Holiday Rate +100% (Before VAT)'}: ${rate100.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: 1er mai et 25 décembre' : 'Applied to: May 1st and Dec 25th'}`, 14, 57);
   doc.text(`${language === 'fr' ? 'Ticket Modérateur' : 'Co-payment'}: ${copayPercentage}%`, 14, 63);
 
   // Calculate totals by caregiver - separate regular, 25% majoration, and 100% majoration
@@ -76,35 +76,87 @@ export function exportFinancialSummaryToPDF(
 
     pairs.forEach(pair => {
       if (pair.checkOut) {
-        const hours = (new Date(pair.checkOut.timestamp).getTime() - new Date(pair.checkIn.timestamp).getTime()) / (1000 * 60 * 60);
+        const start = new Date(pair.checkIn.timestamp);
+        const end = new Date(pair.checkOut.timestamp);
+        const totalMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
         const name = pair.checkIn.caregiver_name;
 
         if (pair.checkIn.is_training) {
-          caregiverTrainingStats[name] = (caregiverTrainingStats[name] || 0) + hours;
+          caregiverTrainingStats[name] = (caregiverTrainingStats[name] || 0) + (totalMinutes / 60);
         } else {
           const majoration = getHolidayMajoration(date);
 
           if (majoration === 1.0) {
-            // 100% majoration (May 1st, Dec 25th)
+            // 100% majoration (May 1st, Dec 25th) - all hours
             if (!caregiver100HolidayStats[name]) {
               caregiver100HolidayStats[name] = { hours: 0, amount: 0 };
             }
-            caregiver100HolidayStats[name].hours += hours;
-            caregiver100HolidayStats[name].amount += hours * rate100;
+            caregiver100HolidayStats[name].hours += totalMinutes / 60;
+            caregiver100HolidayStats[name].amount += (totalMinutes / 60) * rate100;
           } else if (majoration === 0.25) {
-            // 25% majoration (other holidays)
+            // 25% majoration (holidays/Sundays) - all hours
             if (!caregiver25HolidayStats[name]) {
               caregiver25HolidayStats[name] = { hours: 0, amount: 0 };
             }
-            caregiver25HolidayStats[name].hours += hours;
-            caregiver25HolidayStats[name].amount += hours * rate25;
+            caregiver25HolidayStats[name].hours += totalMinutes / 60;
+            caregiver25HolidayStats[name].amount += (totalMinutes / 60) * rate25;
           } else {
-            // Regular hours
-            if (!caregiverRegularStats[name]) {
-              caregiverRegularStats[name] = { hours: 0, amount: 0 };
+            // Regular weekday - split by time of day (8 AM - 8 PM regular, before/after 25%)
+            const morningStart = new Date(start);
+            morningStart.setHours(8, 0, 0, 0);
+            const eveningStart = new Date(start);
+            eveningStart.setHours(20, 0, 0, 0);
+
+            let earlyMorningMinutes = 0;  // Before 8 AM (25%)
+            let regularMinutes = 0;        // 8 AM - 8 PM (regular)
+            let eveningMinutes = 0;        // After 8 PM (25%)
+
+            // If shift starts before 8 AM
+            if (start < morningStart) {
+              if (end <= morningStart) {
+                earlyMorningMinutes = totalMinutes;
+              } else {
+                earlyMorningMinutes = (morningStart.getTime() - start.getTime()) / (1000 * 60);
+                if (end > eveningStart) {
+                  regularMinutes = (eveningStart.getTime() - morningStart.getTime()) / (1000 * 60);
+                  eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+                } else {
+                  regularMinutes = (end.getTime() - morningStart.getTime()) / (1000 * 60);
+                }
+              }
             }
-            caregiverRegularStats[name].hours += hours;
-            caregiverRegularStats[name].amount += hours * regularRate;
+            // If shift starts between 8 AM and 8 PM
+            else if (start >= morningStart && start < eveningStart) {
+              if (end <= eveningStart) {
+                regularMinutes = totalMinutes;
+              } else {
+                regularMinutes = (eveningStart.getTime() - start.getTime()) / (1000 * 60);
+                eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+              }
+            }
+            // If shift starts after 8 PM
+            else {
+              eveningMinutes = totalMinutes;
+            }
+
+            // Add regular hours
+            if (regularMinutes > 0) {
+              if (!caregiverRegularStats[name]) {
+                caregiverRegularStats[name] = { hours: 0, amount: 0 };
+              }
+              caregiverRegularStats[name].hours += regularMinutes / 60;
+              caregiverRegularStats[name].amount += (regularMinutes / 60) * regularRate;
+            }
+
+            // Add early morning and evening hours to 25% majoration
+            const majoredMinutes = earlyMorningMinutes + eveningMinutes;
+            if (majoredMinutes > 0) {
+              if (!caregiver25HolidayStats[name]) {
+                caregiver25HolidayStats[name] = { hours: 0, amount: 0 };
+              }
+              caregiver25HolidayStats[name].hours += majoredMinutes / 60;
+              caregiver25HolidayStats[name].amount += (majoredMinutes / 60) * rate25;
+            }
           }
         }
       }
@@ -493,9 +545,9 @@ function addFinancialSummaryToPage(
   doc.setFontSize(8);
   const rate25 = regularRate * 1.25;
   const rate100 = regularRate * 2.0;
-  doc.text(`${language === 'fr' ? 'Tarif Normal (Hors TVA)' : 'Regular Rate (Before VAT)'}: ${regularRate.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours de semaine avant 20h' : 'Applied to: Weekdays before 8pm'}`, 14, startY + 6);
-  doc.text(`${language === 'fr' ? 'Tarif Majoré +25% (Hors TVA)' : 'Holiday Rate +25% (Before VAT)'}: ${rate25.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours fériés, dimanches, après 20h' : 'Applied to: Holidays, Sundays, after 8pm'}`, 14, startY + 10);
-  doc.text(`${language === 'fr' ? 'Tarif Majoré +100% (Hors TVA)' : 'Holiday Rate +100% (Before VAT)'}: ${rate100.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: 1er mai et 25 décembre' : 'Applied to: May 1st and December 25th'}`, 14, startY + 14);
+  doc.text(`${language === 'fr' ? 'Tarif Normal (Hors TVA)' : 'Regular Rate (Before VAT)'}: ${regularRate.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours de semaine 8h-20h' : 'Applied to: Weekdays 8 AM - 8 PM'}`, 14, startY + 6);
+  doc.text(`${language === 'fr' ? 'Tarif Majoré +25% (Hors TVA)' : 'Holiday Rate +25% (Before VAT)'}: ${rate25.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours fériés, dimanches, avant 8h ou après 20h' : 'Applied to: Holidays, Sundays, before 8 AM or after 8 PM'}`, 14, startY + 10);
+  doc.text(`${language === 'fr' ? 'Tarif Majoré +100% (Hors TVA)' : 'Holiday Rate +100% (Before VAT)'}: ${rate100.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: 1er mai et 25 décembre' : 'Applied to: May 1st and Dec 25th'}`, 14, startY + 14);
   doc.text(`${language === 'fr' ? 'Ticket Modérateur' : 'Co-payment'}: ${copayPercentage}%`, 14, startY + 18);
 
   const grouped = groupCheckInsByDate(checkIns, timezone);
@@ -511,35 +563,87 @@ function addFinancialSummaryToPage(
 
     pairs.forEach(pair => {
       if (pair.checkOut) {
-        const hours = (new Date(pair.checkOut.timestamp).getTime() - new Date(pair.checkIn.timestamp).getTime()) / (1000 * 60 * 60);
+        const start = new Date(pair.checkIn.timestamp);
+        const end = new Date(pair.checkOut.timestamp);
+        const totalMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
         const name = pair.checkIn.caregiver_name;
 
         if (pair.checkIn.is_training) {
-          caregiverTrainingStats[name] = (caregiverTrainingStats[name] || 0) + hours;
+          caregiverTrainingStats[name] = (caregiverTrainingStats[name] || 0) + (totalMinutes / 60);
         } else {
           const majoration = getHolidayMajoration(date);
 
           if (majoration === 1.0) {
-            // 100% majoration (May 1st, Dec 25th)
+            // 100% majoration (May 1st, Dec 25th) - all hours
             if (!caregiver100HolidayStats[name]) {
               caregiver100HolidayStats[name] = { hours: 0, amount: 0 };
             }
-            caregiver100HolidayStats[name].hours += hours;
-            caregiver100HolidayStats[name].amount += hours * rate100;
+            caregiver100HolidayStats[name].hours += totalMinutes / 60;
+            caregiver100HolidayStats[name].amount += (totalMinutes / 60) * rate100;
           } else if (majoration === 0.25) {
-            // 25% majoration (other holidays)
+            // 25% majoration (holidays/Sundays) - all hours
             if (!caregiver25HolidayStats[name]) {
               caregiver25HolidayStats[name] = { hours: 0, amount: 0 };
             }
-            caregiver25HolidayStats[name].hours += hours;
-            caregiver25HolidayStats[name].amount += hours * rate25;
+            caregiver25HolidayStats[name].hours += totalMinutes / 60;
+            caregiver25HolidayStats[name].amount += (totalMinutes / 60) * rate25;
           } else {
-            // Regular hours
-            if (!caregiverRegularStats[name]) {
-              caregiverRegularStats[name] = { hours: 0, amount: 0 };
+            // Regular weekday - split by time of day (8 AM - 8 PM regular, before/after 25%)
+            const morningStart = new Date(start);
+            morningStart.setHours(8, 0, 0, 0);
+            const eveningStart = new Date(start);
+            eveningStart.setHours(20, 0, 0, 0);
+
+            let earlyMorningMinutes = 0;  // Before 8 AM (25%)
+            let regularMinutes = 0;        // 8 AM - 8 PM (regular)
+            let eveningMinutes = 0;        // After 8 PM (25%)
+
+            // If shift starts before 8 AM
+            if (start < morningStart) {
+              if (end <= morningStart) {
+                earlyMorningMinutes = totalMinutes;
+              } else {
+                earlyMorningMinutes = (morningStart.getTime() - start.getTime()) / (1000 * 60);
+                if (end > eveningStart) {
+                  regularMinutes = (eveningStart.getTime() - morningStart.getTime()) / (1000 * 60);
+                  eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+                } else {
+                  regularMinutes = (end.getTime() - morningStart.getTime()) / (1000 * 60);
+                }
+              }
             }
-            caregiverRegularStats[name].hours += hours;
-            caregiverRegularStats[name].amount += hours * regularRate;
+            // If shift starts between 8 AM and 8 PM
+            else if (start >= morningStart && start < eveningStart) {
+              if (end <= eveningStart) {
+                regularMinutes = totalMinutes;
+              } else {
+                regularMinutes = (eveningStart.getTime() - start.getTime()) / (1000 * 60);
+                eveningMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
+              }
+            }
+            // If shift starts after 8 PM
+            else {
+              eveningMinutes = totalMinutes;
+            }
+
+            // Add regular hours
+            if (regularMinutes > 0) {
+              if (!caregiverRegularStats[name]) {
+                caregiverRegularStats[name] = { hours: 0, amount: 0 };
+              }
+              caregiverRegularStats[name].hours += regularMinutes / 60;
+              caregiverRegularStats[name].amount += (regularMinutes / 60) * regularRate;
+            }
+
+            // Add early morning and evening hours to 25% majoration
+            const majoredMinutes = earlyMorningMinutes + eveningMinutes;
+            if (majoredMinutes > 0) {
+              if (!caregiver25HolidayStats[name]) {
+                caregiver25HolidayStats[name] = { hours: 0, amount: 0 };
+              }
+              caregiver25HolidayStats[name].hours += majoredMinutes / 60;
+              caregiver25HolidayStats[name].amount += (majoredMinutes / 60) * rate25;
+            }
           }
         }
       }
