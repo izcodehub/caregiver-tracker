@@ -70,10 +70,15 @@ function CheckInContent() {
       setBlocked(false);
       setError('');
       setValidated(false);
+      // Immediately set new timestamp to prevent countdown timer from showing expired error
+      const newTimestamp = new Date().toISOString();
+      setTapTimestamp(newTimestamp);
       // Clear old session data to prevent interference
       sessionStorage.removeItem('card_tap_time');
       sessionStorage.removeItem('nfc_qr_code');
       sessionStorage.removeItem('verification_method');
+      // Store new timestamp immediately
+      sessionStorage.setItem('card_tap_time', newTimestamp);
     }
 
     const processParams = () => {
