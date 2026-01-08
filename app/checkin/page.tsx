@@ -70,6 +70,10 @@ function CheckInContent() {
       setBlocked(false);
       setError('');
       setValidated(false);
+      // Clear old session data to prevent interference
+      sessionStorage.removeItem('card_tap_time');
+      sessionStorage.removeItem('nfc_qr_code');
+      sessionStorage.removeItem('verification_method');
     }
 
     const processParams = () => {
@@ -108,6 +112,10 @@ function CheckInContent() {
         // Reset blocked state for new QR scan
         setBlocked(false);
         setError('');
+        // Clear old session data to prevent interference
+        sessionStorage.removeItem('card_tap_time');
+        sessionStorage.removeItem('nfc_qr_code');
+        sessionStorage.removeItem('verification_method');
 
         setBeneficiaryQrCode(qrCode);
         setVerificationMethod('qr');
