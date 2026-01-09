@@ -189,6 +189,12 @@ export function exportFinancialSummaryToPDF(
       ]],
       body: regularTableData,
       headStyles: { fillColor: [59, 130, 246] },
+      columnStyles: {
+        0: { cellWidth: 70 },
+        1: { cellWidth: 30, halign: 'right' },
+        2: { cellWidth: 45, halign: 'right' },
+        3: { cellWidth: 45, halign: 'right' }
+      },
     });
     currentY = (doc as any).lastAutoTable.finalY + 10;
   }
@@ -212,6 +218,12 @@ export function exportFinancialSummaryToPDF(
       ]],
       body: holiday25TableData,
       headStyles: { fillColor: [234, 179, 8] },
+      columnStyles: {
+        0: { cellWidth: 70 },
+        1: { cellWidth: 30, halign: 'right' },
+        2: { cellWidth: 45, halign: 'right' },
+        3: { cellWidth: 45, halign: 'right' }
+      },
     });
     currentY = (doc as any).lastAutoTable.finalY + 10;
   }
@@ -235,6 +247,12 @@ export function exportFinancialSummaryToPDF(
       ]],
       body: holiday100TableData,
       headStyles: { fillColor: [220, 38, 38] },
+      columnStyles: {
+        0: { cellWidth: 70 },
+        1: { cellWidth: 30, halign: 'right' },
+        2: { cellWidth: 45, halign: 'right' },
+        3: { cellWidth: 45, halign: 'right' }
+      },
     });
     currentY = (doc as any).lastAutoTable.finalY + 10;
   }
@@ -254,6 +272,10 @@ export function exportFinancialSummaryToPDF(
       ]],
       body: trainingTableData,
       headStyles: { fillColor: [251, 146, 60] },
+      columnStyles: {
+        0: { cellWidth: 70 },
+        1: { cellWidth: 120, halign: 'right' }
+      },
     });
     currentY = (doc as any).lastAutoTable.finalY + 10;
   }
@@ -299,6 +321,12 @@ export function exportFinancialSummaryToPDF(
     startY: currentY,
     head: [[language === 'fr' ? 'Résumé Financier' : 'Financial Summary', language === 'fr' ? 'Hors TVA' : 'Before VAT', language === 'fr' ? 'TVA 5.5%' : 'VAT 5.5%', language === 'fr' ? 'Avec TVA' : 'With VAT']],
     body: summaryRows,
+    columnStyles: {
+      0: { cellWidth: 70 },
+      1: { cellWidth: 40, halign: 'right' },
+      2: { cellWidth: 40, halign: 'right' },
+      3: { cellWidth: 40, halign: 'right' }
+    },
     didParseCell: (data: any) => {
       // Copay row is the last row
       if (data.row.index === summaryRows.length - 1 && data.section === 'body') {
@@ -330,6 +358,10 @@ export function exportFinancialSummaryToPDF(
       startY: notesY,
       head: [[language === 'fr' ? 'Notes par Type' : 'Notes by Type', '']],
       body: noteData,
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 70, halign: 'right' }
+      },
     });
   }
 
@@ -453,6 +485,12 @@ export function exportDetailedCheckInsToPDF(
       language === 'fr' ? 'Heures' : 'Hours'
     ]],
     body: tableData,
+    columnStyles: {
+      0: { cellWidth: 60 },
+      1: { cellWidth: 40, halign: 'center' },
+      2: { cellWidth: 40, halign: 'center' },
+      3: { cellWidth: 30, halign: 'right' }
+    },
   });
 
   // Add financial summary at the end if provided
@@ -682,6 +720,12 @@ function addFinancialSummaryToPage(
       body: regularTableData,
       headStyles: { fillColor: [59, 130, 246], fontSize: 8 },
       bodyStyles: { fontSize: 7 },
+      columnStyles: {
+        0: { cellWidth: 70 },
+        1: { cellWidth: 30, halign: 'right' },
+        2: { cellWidth: 45, halign: 'right' },
+        3: { cellWidth: 45, halign: 'right' }
+      },
     });
     currentY = (doc as any).lastAutoTable.finalY + 3;
   }
@@ -706,6 +750,12 @@ function addFinancialSummaryToPage(
       body: holiday25TableData,
       headStyles: { fillColor: [234, 179, 8], fontSize: 8 },
       bodyStyles: { fontSize: 7 },
+      columnStyles: {
+        0: { cellWidth: 70 },
+        1: { cellWidth: 30, halign: 'right' },
+        2: { cellWidth: 45, halign: 'right' },
+        3: { cellWidth: 45, halign: 'right' }
+      },
     });
     currentY = (doc as any).lastAutoTable.finalY + 3;
   }
@@ -730,6 +780,12 @@ function addFinancialSummaryToPage(
       body: holiday100TableData,
       headStyles: { fillColor: [220, 38, 38], fontSize: 8 },
       bodyStyles: { fontSize: 7 },
+      columnStyles: {
+        0: { cellWidth: 70 },
+        1: { cellWidth: 30, halign: 'right' },
+        2: { cellWidth: 45, halign: 'right' },
+        3: { cellWidth: 45, halign: 'right' }
+      },
     });
     currentY = (doc as any).lastAutoTable.finalY + 3;
   }
@@ -750,6 +806,10 @@ function addFinancialSummaryToPage(
       body: trainingTableData,
       headStyles: { fillColor: [251, 146, 60], fontSize: 8 },
       bodyStyles: { fontSize: 7 },
+      columnStyles: {
+        0: { cellWidth: 70 },
+        1: { cellWidth: 120, halign: 'right' }
+      },
     });
     currentY = (doc as any).lastAutoTable.finalY + 3;
   }
@@ -797,6 +857,12 @@ function addFinancialSummaryToPage(
     body: summaryRows,
     headStyles: { fontSize: 8 },
     bodyStyles: { fontSize: 7 },
+    columnStyles: {
+      0: { cellWidth: 70 },
+      1: { cellWidth: 40, halign: 'right' },
+      2: { cellWidth: 40, halign: 'right' },
+      3: { cellWidth: 40, halign: 'right' }
+    },
     didParseCell: (data: any) => {
       // Copay row is the last row
       if (data.row.index === summaryRows.length - 1 && data.section === 'body') {
@@ -830,6 +896,10 @@ function addFinancialSummaryToPage(
       body: noteData,
       headStyles: { fontSize: 8 },
       bodyStyles: { fontSize: 7 },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 70, halign: 'right' }
+      },
     });
   }
 }
