@@ -1,7 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
+import { toZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { fr, enUS } from 'date-fns/locale';
 import { User, Clock, Euro, CheckCircle, XCircle } from 'lucide-react';
 import { decimalToHHMM, formatNumber } from '@/lib/time-utils';
@@ -132,17 +132,16 @@ export default function CaregiverBreakdown({
 
         const stats = caregiverMap.get(caregiverName)!;
 
-        // Check for holiday majoration
-        const dateStr = format(start, 'yyyy-MM-dd');
+        // Check for holiday majoration using beneficiary's local timezone
+        const dateStr = formatInTimeZone(start, timezone, 'yyyy-MM-dd');
         const publicHolidayMajoration = getHolidayMajoration(dateStr);
-        const isSunday = start.getDay() === 0;
 
         // If it's May 1st or Dec 25th (100% majoration holidays)
         if (publicHolidayMajoration === 1.0) {
           stats.holiday100Hours += totalMinutes / 60;
         }
         // If it's another public holiday or Sunday (25% majoration)
-        else if (publicHolidayMajoration === 0.25 || isSunday) {
+        else if (publicHolidayMajoration === 0.25) {
           stats.holiday25Hours += totalMinutes / 60;
         }
         // Otherwise, check for time-of-day rates (8 AM - 8 PM regular, before/after 25%)

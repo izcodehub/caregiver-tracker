@@ -191,10 +191,11 @@ export function exportFinancialSummaryToPDF(
       headStyles: { fillColor: [59, 130, 246] },
       columnStyles: {
         0: { cellWidth: 70 },
-        1: { cellWidth: 30, halign: 'right' },
-        2: { cellWidth: 45, halign: 'right' },
-        3: { cellWidth: 45, halign: 'right' }
+        1: { cellWidth: 32, halign: 'right' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 40, halign: 'right' }
       },
+      margin: { left: 14, right: 14 },
     });
     currentY = (doc as any).lastAutoTable.finalY + 10;
   }
@@ -220,10 +221,11 @@ export function exportFinancialSummaryToPDF(
       headStyles: { fillColor: [234, 179, 8] },
       columnStyles: {
         0: { cellWidth: 70 },
-        1: { cellWidth: 30, halign: 'right' },
-        2: { cellWidth: 45, halign: 'right' },
-        3: { cellWidth: 45, halign: 'right' }
+        1: { cellWidth: 32, halign: 'right' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 40, halign: 'right' }
       },
+      margin: { left: 14, right: 14 },
     });
     currentY = (doc as any).lastAutoTable.finalY + 10;
   }
@@ -249,10 +251,11 @@ export function exportFinancialSummaryToPDF(
       headStyles: { fillColor: [220, 38, 38] },
       columnStyles: {
         0: { cellWidth: 70 },
-        1: { cellWidth: 30, halign: 'right' },
-        2: { cellWidth: 45, halign: 'right' },
-        3: { cellWidth: 45, halign: 'right' }
+        1: { cellWidth: 32, halign: 'right' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 40, halign: 'right' }
       },
+      margin: { left: 14, right: 14 },
     });
     currentY = (doc as any).lastAutoTable.finalY + 10;
   }
@@ -274,8 +277,9 @@ export function exportFinancialSummaryToPDF(
       headStyles: { fillColor: [251, 146, 60] },
       columnStyles: {
         0: { cellWidth: 70 },
-        1: { cellWidth: 120, halign: 'right' }
+        1: { cellWidth: 112, halign: 'right' }
       },
+      margin: { left: 14, right: 14 },
     });
     currentY = (doc as any).lastAutoTable.finalY + 10;
   }
@@ -322,11 +326,12 @@ export function exportFinancialSummaryToPDF(
     head: [[language === 'fr' ? 'Résumé Financier' : 'Financial Summary', language === 'fr' ? 'Hors TVA' : 'Before VAT', language === 'fr' ? 'TVA 5.5%' : 'VAT 5.5%', language === 'fr' ? 'Avec TVA' : 'With VAT']],
     body: summaryRows,
     columnStyles: {
-      0: { cellWidth: 70 },
-      1: { cellWidth: 40, halign: 'right' },
-      2: { cellWidth: 40, halign: 'right' },
-      3: { cellWidth: 40, halign: 'right' }
+      0: { cellWidth: 65 },
+      1: { cellWidth: 37, halign: 'right' },
+      2: { cellWidth: 37, halign: 'right' },
+      3: { cellWidth: 43, halign: 'right' }
     },
+    margin: { left: 14, right: 14 },
     didParseCell: (data: any) => {
       // Copay row is the last row
       if (data.row.index === summaryRows.length - 1 && data.section === 'body') {
@@ -359,9 +364,10 @@ export function exportFinancialSummaryToPDF(
       head: [[language === 'fr' ? 'Notes par Type' : 'Notes by Type', '']],
       body: noteData,
       columnStyles: {
-        0: { cellWidth: 120 },
+        0: { cellWidth: 112 },
         1: { cellWidth: 70, halign: 'right' }
       },
+      margin: { left: 14, right: 14 },
     });
   }
 
@@ -486,11 +492,12 @@ export function exportDetailedCheckInsToPDF(
     ]],
     body: tableData,
     columnStyles: {
-      0: { cellWidth: 60 },
-      1: { cellWidth: 40, halign: 'center' },
-      2: { cellWidth: 40, halign: 'center' },
-      3: { cellWidth: 30, halign: 'right' }
+      0: { cellWidth: 70 },
+      1: { cellWidth: 37, halign: 'center' },
+      2: { cellWidth: 37, halign: 'center' },
+      3: { cellWidth: 38, halign: 'right' }
     },
+    margin: { left: 14, right: 14 },
   });
 
   // Add financial summary at the end if provided
@@ -722,10 +729,11 @@ function addFinancialSummaryToPage(
       bodyStyles: { fontSize: 7 },
       columnStyles: {
         0: { cellWidth: 70 },
-        1: { cellWidth: 30, halign: 'right' },
-        2: { cellWidth: 45, halign: 'right' },
-        3: { cellWidth: 45, halign: 'right' }
+        1: { cellWidth: 32, halign: 'right' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 40, halign: 'right' }
       },
+      margin: { left: 14, right: 14 },
     });
     currentY = (doc as any).lastAutoTable.finalY + 3;
   }
@@ -752,10 +760,11 @@ function addFinancialSummaryToPage(
       bodyStyles: { fontSize: 7 },
       columnStyles: {
         0: { cellWidth: 70 },
-        1: { cellWidth: 30, halign: 'right' },
-        2: { cellWidth: 45, halign: 'right' },
-        3: { cellWidth: 45, halign: 'right' }
+        1: { cellWidth: 32, halign: 'right' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 40, halign: 'right' }
       },
+      margin: { left: 14, right: 14 },
     });
     currentY = (doc as any).lastAutoTable.finalY + 3;
   }
@@ -782,10 +791,11 @@ function addFinancialSummaryToPage(
       bodyStyles: { fontSize: 7 },
       columnStyles: {
         0: { cellWidth: 70 },
-        1: { cellWidth: 30, halign: 'right' },
-        2: { cellWidth: 45, halign: 'right' },
-        3: { cellWidth: 45, halign: 'right' }
+        1: { cellWidth: 32, halign: 'right' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 40, halign: 'right' }
       },
+      margin: { left: 14, right: 14 },
     });
     currentY = (doc as any).lastAutoTable.finalY + 3;
   }
@@ -808,8 +818,9 @@ function addFinancialSummaryToPage(
       bodyStyles: { fontSize: 7 },
       columnStyles: {
         0: { cellWidth: 70 },
-        1: { cellWidth: 120, halign: 'right' }
+        1: { cellWidth: 112, halign: 'right' }
       },
+      margin: { left: 14, right: 14 },
     });
     currentY = (doc as any).lastAutoTable.finalY + 3;
   }
@@ -858,11 +869,12 @@ function addFinancialSummaryToPage(
     headStyles: { fontSize: 8 },
     bodyStyles: { fontSize: 7 },
     columnStyles: {
-      0: { cellWidth: 70 },
-      1: { cellWidth: 40, halign: 'right' },
-      2: { cellWidth: 40, halign: 'right' },
-      3: { cellWidth: 40, halign: 'right' }
+      0: { cellWidth: 65 },
+      1: { cellWidth: 37, halign: 'right' },
+      2: { cellWidth: 37, halign: 'right' },
+      3: { cellWidth: 43, halign: 'right' }
     },
+    margin: { left: 14, right: 14 },
     didParseCell: (data: any) => {
       // Copay row is the last row
       if (data.row.index === summaryRows.length - 1 && data.section === 'body') {
@@ -897,9 +909,10 @@ function addFinancialSummaryToPage(
       headStyles: { fontSize: 8 },
       bodyStyles: { fontSize: 7 },
       columnStyles: {
-        0: { cellWidth: 120 },
+        0: { cellWidth: 112 },
         1: { cellWidth: 70, halign: 'right' }
       },
+      margin: { left: 14, right: 14 },
     });
   }
 }
