@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase } from '@/lib/supabase';
+import { supabase, BeneficiaryRateHistory } from '@/lib/supabase';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import { exportFinancialSummaryToCSV, exportDetailedCheckInsToCSV } from '@/lib/export';
@@ -130,6 +130,7 @@ export default function DashboardPage() {
   const { t, language } = useLanguage();
 
   const [elderly, setElderly] = useState<Elderly | null>(null);
+  const [rateHistory, setRateHistory] = useState<BeneficiaryRateHistory[]>([]);
   const [checkIns, setCheckIns] = useState<CheckInOut[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [currentStatus, setCurrentStatus] = useState<CurrentStatus | null>(null);
@@ -305,6 +306,15 @@ export default function DashboardPage() {
       if (elderlyData) {
         setElderly(elderlyData);
 
+        // Load rate history for time-based rates
+        const { data: rateHistoryData } = await supabase
+          .from('beneficiary_rate_history')
+          .select('*')
+          .eq('beneficiary_id', elderlyData.id)
+          .order('effective_date', { ascending: false });
+
+        setRateHistory(rateHistoryData || []);
+
         // Load family members
         await loadFamilyMembers();
 
@@ -358,7 +368,9 @@ export default function DashboardPage() {
       selectedMonth,
       elderly.regular_rate || 15,
       elderly.holiday_rate || 22.5,
-      elderly.currency || 'EUR'
+      elderly.currency || 'EUR',
+      rateHistory,
+      timezone
     );
   };
 
@@ -378,7 +390,8 @@ export default function DashboardPage() {
       elderly.ticket_moderateur || 0,
       dailyNotes,
       language,
-      timezone
+      timezone,
+      rateHistory
     );
   };
 
@@ -393,7 +406,8 @@ export default function DashboardPage() {
       elderly.regular_rate || 15,
       elderly.currency || 'EUR',
       elderly.ticket_moderateur || 0,
-      timezone
+      timezone,
+      rateHistory
     );
   };
 
@@ -1081,6 +1095,7 @@ export default function DashboardPage() {
               checkIns={checkIns}
               selectedMonth={selectedMonth}
               regularRate={elderly.regular_rate || 15}
+              rateHistory={rateHistory}
               currency={elderly.currency || 'EUR'}
               copayPercentage={elderly.ticket_moderateur || 0}
               caregiverColors={caregiverColors}

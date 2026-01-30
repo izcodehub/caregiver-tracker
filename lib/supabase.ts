@@ -85,3 +85,11 @@ export type FamilyMember = {
   };
   created_at: string;
 };
+
+export type BeneficiaryRateHistory = {
+  id: string;
+  beneficiary_id: string;
+  rate: number;
+  effective_date: string; // ISO date string (YYYY-MM-DD)
+  created_at: string;
+};

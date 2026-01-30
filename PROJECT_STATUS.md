@@ -56,11 +56,20 @@ caregiver-tracker/
 - `name` (text)
 - `qr_code` (text, unique)
 - `nfc_secret` (text) - Shared secret for NFC/QR validation
-- `regular_rate` (numeric) - Base hourly rate
+- `regular_rate` (numeric) - Base hourly rate (maintained for backward compatibility)
 - `currency` (text, default: 'EUR')
 - `copay_percentage` (numeric) - Co-payment percentage
 - `timezone` (text, default: 'Europe/Paris')
 - `created_at` (timestamp)
+
+### `beneficiary_rate_history`
+- `id` (uuid, PK)
+- `beneficiary_id` (uuid, FK) - Reference to beneficiary
+- `rate` (numeric) - Regular hourly rate (before VAT)
+- `effective_date` (date) - Date when this rate becomes active
+- `created_at` (timestamp) - Audit trail
+- **Purpose:** Stores time-based rate history, allowing different rates at different time periods
+- **Usage:** System automatically applies the correct historical rate based on check-in date
 
 ### `check_ins`
 - `id` (uuid, PK)
@@ -143,6 +152,24 @@ caregiver-tracker/
 
 ## Recent Updates (January 2026)
 
+### Time-Based Rate System (January 30, 2026)
+- **Added:** Full support for time-based rates that change over different periods
+- **Database:** New `beneficiary_rate_history` table to store rates with effective dates
+- **Features:**
+  - Rates are automatically applied based on check-in date
+  - Historical check-ins use the rate that was effective at that time
+  - Support for multiple rate changes over time
+  - Backward compatible with existing single-rate system
+- **Files:**
+  - Database: `supabase/migration_add_rate_history.sql`
+  - Types: `lib/supabase.ts` (BeneficiaryRateHistory type)
+  - Utilities: `lib/rate-utils.ts` (getRateForDate, groupCheckInsByRate, calculateCostForDate)
+  - Components: `components/CaregiverBreakdown.tsx`
+  - Exports: `lib/export.ts`, `lib/pdf-export.ts`
+  - UI: `app/dashboard/[beneficiaryId]/page.tsx`
+- **Example Use Case:** Brigitte Germe's rate increased from existing rate to €25/h TTC (€23.70/h HT) on January 1st, 2026
+- **Migration:** `supabase/migration_add_brigitte_rate_history.sql`
+
 ### Timezone Fixes
 - **Issue:** Holiday detection (May 1, Dec 25) failed when viewing from different timezones
 - **Fix:** Changed from `format(date, 'yyyy-MM-dd')` to `formatInTimeZone(date, timezone, 'yyyy-MM-dd')`
@@ -205,6 +232,15 @@ caregiver-tracker/
 - Check-ins grouped by date in beneficiary's timezone
 - Uses `formatInTimeZone(timestamp, timezone, 'yyyy-MM-dd')`
 - Critical for correct daily totals
+
+### 6. **Time-Based Rate System**
+- Rates can vary by date using the `beneficiary_rate_history` table
+- System automatically selects the correct rate for each check-in based on its date
+- Rate lookup: Uses `getRateForDate(rateHistory, checkInDate, fallbackRate, timezone)`
+- **Backward Compatibility:** If no rate history exists, falls back to `beneficiaries.regular_rate`
+- **Majored Rates:** +25% and +100% rates are calculated dynamically from the base rate
+- **Example:** A check-in on 2025-12-15 uses the rate effective on that date, while a check-in on 2026-01-15 uses the new rate
+- **Location:** `/lib/rate-utils.ts`
 
 ## Known Limitations
 

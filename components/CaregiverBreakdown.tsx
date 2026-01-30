@@ -8,6 +8,8 @@ import { decimalToHHMM, formatNumber } from '@/lib/time-utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getColor, hexToRgba } from '@/lib/caregiver-colors';
 import { getHolidayMajoration } from '@/lib/holiday-rates';
+import { getRateForDate } from '@/lib/rate-utils';
+import { BeneficiaryRateHistory } from '@/lib/supabase';
 
 type CheckInOut = {
   id: string;
@@ -61,6 +63,7 @@ type CaregiverBreakdownProps = {
   checkIns: CheckInOut[];
   selectedMonth: Date;
   regularRate: number;
+  rateHistory?: BeneficiaryRateHistory[]; // Optional for backward compatibility
   currency: string;
   copayPercentage: number;
   caregiverColors: Map<string, string>;
@@ -72,6 +75,7 @@ export default function CaregiverBreakdown({
   checkIns,
   selectedMonth,
   regularRate,
+  rateHistory,
   currency,
   copayPercentage,
   caregiverColors,
@@ -81,9 +85,7 @@ export default function CaregiverBreakdown({
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
 
-  // Calculate dynamic rates
-  const rate25 = regularRate * 1.25;
-  const rate100 = regularRate * 2.0;
+  // Note: Dynamic rates (rate25, rate100) are now calculated per check-in based on the applicable base rate
 
   // Get all unique caregiver names for color fallback
   const allCaregiverNames = Array.from(new Set(checkIns.map(ci => ci.caregiver_name)));
@@ -201,26 +203,127 @@ export default function CaregiverBreakdown({
       }
     });
 
-    // Convert to array and calculate amounts
+    // Convert to array and calculate amounts using time-based rates
     const summaries: CaregiverSummary[] = [];
     caregiverMap.forEach((stats, name) => {
-      const regularAmount = stats.regularHours * regularRate;
-      const holiday25Amount = stats.holiday25Hours * rate25;
-      const holiday100Amount = stats.holiday100Hours * rate100;
-      const totalAmount = regularAmount + holiday25Amount + holiday100Amount;
-      const totalHours = stats.regularHours + stats.holiday25Hours + stats.holiday100Hours;
+      // If no rate history, use the single regular rate (backward compatibility)
+      if (!rateHistory || rateHistory.length === 0) {
+        const rate25 = regularRate * 1.25;
+        const rate100 = regularRate * 2.0;
+        const regularAmount = stats.regularHours * regularRate;
+        const holiday25Amount = stats.holiday25Hours * rate25;
+        const holiday100Amount = stats.holiday100Hours * rate100;
+        const totalAmount = regularAmount + holiday25Amount + holiday100Amount;
+        const totalHours = stats.regularHours + stats.holiday25Hours + stats.holiday100Hours;
 
-      summaries.push({
-        name,
-        regularHours: stats.regularHours,
-        holiday25Hours: stats.holiday25Hours,
-        holiday100Hours: stats.holiday100Hours,
-        totalHours,
-        regularAmount,
-        holiday25Amount,
-        holiday100Amount,
-        totalAmount,
-      });
+        summaries.push({
+          name,
+          regularHours: stats.regularHours,
+          holiday25Hours: stats.holiday25Hours,
+          holiday100Hours: stats.holiday100Hours,
+          totalHours,
+          regularAmount,
+          holiday25Amount,
+          holiday100Amount,
+          totalAmount,
+        });
+      } else {
+        // With rate history, we need to recalculate by going through check-ins again
+        // to use the correct rate for each time period
+        // For now, we'll use a weighted average approach by recalculating with date-specific rates
+        const caregiverCheckIns = sorted.filter(ci =>
+          ci.caregiver_name === name &&
+          ci.action === 'check-in' &&
+          !ci.is_training
+        );
+
+        let regularAmount = 0;
+        let holiday25Amount = 0;
+        let holiday100Amount = 0;
+
+        caregiverCheckIns.forEach((ci) => {
+          const checkOut = sorted.find(
+            (co) =>
+              co.action === 'check-out' &&
+              co.caregiver_name === ci.caregiver_name &&
+              new Date(co.timestamp).getTime() > new Date(ci.timestamp).getTime()
+          );
+
+          if (!checkOut) return;
+
+          const start = new Date(ci.timestamp);
+          const end = new Date(checkOut.timestamp);
+          const totalMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+
+          // Get the rate that was effective on this check-in date
+          const applicableRate = getRateForDate(rateHistory, start, regularRate, timezone);
+          const rate25 = applicableRate * 1.25;
+          const rate100 = applicableRate * 2.0;
+
+          // Determine which rate category this check-in falls into
+          const dateStr = formatInTimeZone(start, timezone, 'yyyy-MM-dd');
+          const publicHolidayMajoration = getHolidayMajoration(dateStr);
+
+          if (publicHolidayMajoration === 1.0) {
+            holiday100Amount += (totalMinutes / 60) * rate100;
+          } else if (publicHolidayMajoration === 0.25) {
+            holiday25Amount += (totalMinutes / 60) * rate25;
+          } else {
+            // Time-of-day calculation (same as before)
+            const startLocal = toZonedTime(start, timezone);
+            const endLocal = toZonedTime(end, timezone);
+            const morningStart = new Date(startLocal);
+            morningStart.setHours(8, 0, 0, 0);
+            const eveningStart = new Date(startLocal);
+            eveningStart.setHours(20, 0, 0, 0);
+
+            let earlyMorningMinutes = 0;
+            let regularMinutes = 0;
+            let eveningMinutes = 0;
+
+            if (startLocal < morningStart) {
+              if (endLocal <= morningStart) {
+                earlyMorningMinutes = totalMinutes;
+              } else {
+                earlyMorningMinutes = (morningStart.getTime() - startLocal.getTime()) / (1000 * 60);
+                if (endLocal > eveningStart) {
+                  regularMinutes = (eveningStart.getTime() - morningStart.getTime()) / (1000 * 60);
+                  eveningMinutes = (endLocal.getTime() - eveningStart.getTime()) / (1000 * 60);
+                } else {
+                  regularMinutes = (endLocal.getTime() - morningStart.getTime()) / (1000 * 60);
+                }
+              }
+            } else if (startLocal >= morningStart && startLocal < eveningStart) {
+              if (endLocal <= eveningStart) {
+                regularMinutes = totalMinutes;
+              } else {
+                regularMinutes = (eveningStart.getTime() - startLocal.getTime()) / (1000 * 60);
+                eveningMinutes = (endLocal.getTime() - eveningStart.getTime()) / (1000 * 60);
+              }
+            } else {
+              eveningMinutes = totalMinutes;
+            }
+
+            regularAmount += (regularMinutes / 60) * applicableRate;
+            holiday25Amount += ((earlyMorningMinutes + eveningMinutes) / 60) * rate25;
+          }
+        });
+
+        const totalAmount = regularAmount + holiday25Amount + holiday100Amount;
+        const totalHours = stats.regularHours + stats.holiday25Hours + stats.holiday100Hours;
+
+        summaries.push({
+          name,
+          regularHours: stats.regularHours,
+          holiday25Hours: stats.holiday25Hours,
+          holiday100Hours: stats.holiday100Hours,
+          totalHours,
+          regularAmount,
+          holiday25Amount,
+          holiday100Amount,
+          totalAmount,
+        });
+      }
     });
 
     return summaries.sort((a, b) => a.name.localeCompare(b.name));

@@ -1,4 +1,6 @@
 import { format } from 'date-fns';
+import { BeneficiaryRateHistory } from './supabase';
+import { getRateForDate } from './rate-utils';
 
 type CheckInOut = {
   id: string;
@@ -24,9 +26,16 @@ type CaregiverSummary = {
 function calculateCaregiverSummaries(
   checkIns: CheckInOut[],
   regularRate: number,
-  holidayRate: number
+  holidayRate: number,
+  rateHistory?: BeneficiaryRateHistory[],
+  timezone: string = 'Europe/Paris'
 ): CaregiverSummary[] {
-  const caregiverMap = new Map<string, { regularHours: number; holidayHours: number }>();
+  const caregiverMap = new Map<string, {
+    regularHours: number;
+    holidayHours: number;
+    regularAmount: number;
+    holidayAmount: number;
+  }>();
 
   const sorted = [...checkIns].sort((a, b) =>
     new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -39,8 +48,19 @@ function calculateCaregiverSummaries(
       const end = new Date(sorted[i + 1].timestamp);
       const totalMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
 
+      // Get the applicable rate for this check-in date
+      const applicableRegularRate = rateHistory && rateHistory.length > 0
+        ? getRateForDate(rateHistory, start, regularRate, timezone)
+        : regularRate;
+      const applicableHolidayRate = applicableRegularRate * 1.25; // Holiday rate is always 25% more
+
       if (!caregiverMap.has(caregiverName)) {
-        caregiverMap.set(caregiverName, { regularHours: 0, holidayHours: 0 });
+        caregiverMap.set(caregiverName, {
+          regularHours: 0,
+          holidayHours: 0,
+          regularAmount: 0,
+          holidayAmount: 0
+        });
       }
 
       const stats = caregiverMap.get(caregiverName)!;
@@ -48,7 +68,9 @@ function calculateCaregiverSummaries(
       const isSunday = dayOfWeek === 0;
 
       if (isSunday) {
-        stats.holidayHours += totalMinutes / 60;
+        const hours = totalMinutes / 60;
+        stats.holidayHours += hours;
+        stats.holidayAmount += hours * applicableHolidayRate;
       } else {
         const endHour = end.getHours();
         const endMinute = end.getMinutes();
@@ -60,15 +82,26 @@ function calculateCaregiverSummaries(
           if (start < eveningStart && end > eveningStart) {
             const regularMinutes = (eveningStart.getTime() - start.getTime()) / (1000 * 60);
             const holidayMinutes = (end.getTime() - eveningStart.getTime()) / (1000 * 60);
-            stats.regularHours += regularMinutes / 60;
-            stats.holidayHours += holidayMinutes / 60;
+            const regularHours = regularMinutes / 60;
+            const holidayHours = holidayMinutes / 60;
+
+            stats.regularHours += regularHours;
+            stats.holidayHours += holidayHours;
+            stats.regularAmount += regularHours * applicableRegularRate;
+            stats.holidayAmount += holidayHours * applicableHolidayRate;
           } else if (start >= eveningStart) {
-            stats.holidayHours += totalMinutes / 60;
+            const hours = totalMinutes / 60;
+            stats.holidayHours += hours;
+            stats.holidayAmount += hours * applicableHolidayRate;
           } else {
-            stats.regularHours += totalMinutes / 60;
+            const hours = totalMinutes / 60;
+            stats.regularHours += hours;
+            stats.regularAmount += hours * applicableRegularRate;
           }
         } else {
-          stats.regularHours += totalMinutes / 60;
+          const hours = totalMinutes / 60;
+          stats.regularHours += hours;
+          stats.regularAmount += hours * applicableRegularRate;
         }
       }
     }
@@ -76,9 +109,7 @@ function calculateCaregiverSummaries(
 
   const summaries: CaregiverSummary[] = [];
   caregiverMap.forEach((stats, name) => {
-    const regularAmount = stats.regularHours * regularRate;
-    const holidayAmount = stats.holidayHours * holidayRate;
-    const totalAmount = regularAmount + holidayAmount;
+    const totalAmount = stats.regularAmount + stats.holidayAmount;
     const totalHours = stats.regularHours + stats.holidayHours;
 
     summaries.push({
@@ -86,8 +117,8 @@ function calculateCaregiverSummaries(
       regularHours: stats.regularHours,
       holidayHours: stats.holidayHours,
       totalHours,
-      regularAmount,
-      holidayAmount,
+      regularAmount: stats.regularAmount,
+      holidayAmount: stats.holidayAmount,
       totalAmount,
     });
   });
@@ -101,9 +132,11 @@ export function exportFinancialSummaryToCSV(
   selectedMonth: Date,
   regularRate: number,
   holidayRate: number,
-  currency: string
+  currency: string,
+  rateHistory?: BeneficiaryRateHistory[],
+  timezone: string = 'Europe/Paris'
 ): void {
-  const summaries = calculateCaregiverSummaries(checkIns, regularRate, holidayRate);
+  const summaries = calculateCaregiverSummaries(checkIns, regularRate, holidayRate, rateHistory, timezone);
 
   if (summaries.length === 0) {
     alert('No data to export');

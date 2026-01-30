@@ -4,6 +4,8 @@ import { format } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { getHolidayMajoration, isPublicHoliday } from './holiday-rates';
+import { getRateForDate } from './rate-utils';
+import { BeneficiaryRateHistory } from './supabase';
 
 type CheckInOut = {
   id: string;
@@ -34,7 +36,8 @@ export function exportFinancialSummaryToPDF(
   copayPercentage: number,
   dailyNotes: DailyNote[],
   language: 'fr' | 'en' = 'fr',
-  timezone: string = 'Europe/Paris'
+  timezone: string = 'Europe/Paris',
+  rateHistory?: BeneficiaryRateHistory[]
 ) {
   const doc = new jsPDF();
 
@@ -57,9 +60,13 @@ export function exportFinancialSummaryToPDF(
 
   // Header info
   doc.setFontSize(10);
+  // Note: With rate history, rates may vary by date
   const rate25 = regularRate * 1.25;
   const rate100 = regularRate * 2.0;
-  doc.text(`${language === 'fr' ? 'Tarif Normal (Hors TVA)' : 'Regular Rate (Before VAT)'}: ${regularRate.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours de semaine 8h-20h' : 'Applied to: Weekdays 8 AM - 8 PM'}`, 14, 45);
+  const rateNote = rateHistory && rateHistory.length > 0
+    ? (language === 'fr' ? ' (Les tarifs peuvent varier selon la date)' : ' (Rates may vary by date)')
+    : '';
+  doc.text(`${language === 'fr' ? 'Tarif Normal (Hors TVA)' : 'Regular Rate (Before VAT)'}: ${regularRate.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours de semaine 8h-20h' : 'Applied to: Weekdays 8 AM - 8 PM'}${rateNote}`, 14, 45);
   doc.text(`${language === 'fr' ? 'Tarif Majoré +25% (Hors TVA)' : 'Holiday Rate +25% (Before VAT)'}: ${rate25.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours fériés, dimanches, avant 8h ou après 20h' : 'Applied to: Holidays, Sundays, before 8 AM or after 8 PM'}`, 14, 51);
   doc.text(`${language === 'fr' ? 'Tarif Majoré +100% (Hors TVA)' : 'Holiday Rate +100% (Before VAT)'}: ${rate100.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: 1er mai et 25 décembre' : 'Applied to: May 1st and Dec 25th'}`, 14, 57);
   doc.text(`${language === 'fr' ? 'Ticket Modérateur' : 'Co-payment'}: ${copayPercentage}%`, 14, 63);
@@ -81,6 +88,13 @@ export function exportFinancialSummaryToPDF(
         const totalMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
         const name = pair.checkIn.caregiver_name;
 
+        // Get the applicable rate for this check-in date
+        const applicableRegularRate = rateHistory && rateHistory.length > 0
+          ? getRateForDate(rateHistory, start, regularRate, timezone)
+          : regularRate;
+        const applicableRate25 = applicableRegularRate * 1.25;
+        const applicableRate100 = applicableRegularRate * 2.0;
+
         if (pair.checkIn.is_training) {
           caregiverTrainingStats[name] = (caregiverTrainingStats[name] || 0) + (totalMinutes / 60);
         } else {
@@ -92,14 +106,14 @@ export function exportFinancialSummaryToPDF(
               caregiver100HolidayStats[name] = { hours: 0, amount: 0 };
             }
             caregiver100HolidayStats[name].hours += totalMinutes / 60;
-            caregiver100HolidayStats[name].amount += (totalMinutes / 60) * rate100;
+            caregiver100HolidayStats[name].amount += (totalMinutes / 60) * applicableRate100;
           } else if (majoration === 0.25) {
             // 25% majoration (holidays/Sundays) - all hours
             if (!caregiver25HolidayStats[name]) {
               caregiver25HolidayStats[name] = { hours: 0, amount: 0 };
             }
             caregiver25HolidayStats[name].hours += totalMinutes / 60;
-            caregiver25HolidayStats[name].amount += (totalMinutes / 60) * rate25;
+            caregiver25HolidayStats[name].amount += (totalMinutes / 60) * applicableRate25;
           } else {
             // Regular weekday - split by time of day (8 AM - 8 PM regular, before/after 25%)
             // Convert to beneficiary's local timezone for time-of-day calculations
@@ -150,7 +164,7 @@ export function exportFinancialSummaryToPDF(
                 caregiverRegularStats[name] = { hours: 0, amount: 0 };
               }
               caregiverRegularStats[name].hours += regularMinutes / 60;
-              caregiverRegularStats[name].amount += (regularMinutes / 60) * regularRate;
+              caregiverRegularStats[name].amount += (regularMinutes / 60) * applicableRegularRate;
             }
 
             // Add early morning and evening hours to 25% majoration
@@ -160,7 +174,7 @@ export function exportFinancialSummaryToPDF(
                 caregiver25HolidayStats[name] = { hours: 0, amount: 0 };
               }
               caregiver25HolidayStats[name].hours += majoredMinutes / 60;
-              caregiver25HolidayStats[name].amount += (majoredMinutes / 60) * rate25;
+              caregiver25HolidayStats[name].amount += (majoredMinutes / 60) * applicableRate25;
             }
           }
         }
@@ -385,7 +399,8 @@ export function exportDetailedCheckInsToPDF(
   regularRate?: number,
   currency?: string,
   copayPercentage?: number,
-  timezone: string = 'Europe/Paris'
+  timezone: string = 'Europe/Paris',
+  rateHistory?: BeneficiaryRateHistory[]
 ) {
   const doc = new jsPDF();
 
@@ -507,9 +522,9 @@ export function exportDetailedCheckInsToPDF(
     // Check if we need a new page
     if (summaryY > 250) {
       doc.addPage();
-      addFinancialSummaryToPage(doc, 20, checkIns, regularRate, currency, copayPercentage, dailyNotes, language, timezone);
+      addFinancialSummaryToPage(doc, 20, checkIns, regularRate, currency, copayPercentage, dailyNotes, language, timezone, rateHistory);
     } else {
-      addFinancialSummaryToPage(doc, summaryY, checkIns, regularRate, currency, copayPercentage, dailyNotes, language, timezone);
+      addFinancialSummaryToPage(doc, summaryY, checkIns, regularRate, currency, copayPercentage, dailyNotes, language, timezone, rateHistory);
     }
   }
 
@@ -585,7 +600,8 @@ function addFinancialSummaryToPage(
   copayPercentage: number,
   dailyNotes: DailyNote[],
   language: 'fr' | 'en',
-  timezone: string = 'Europe/Paris'
+  timezone: string = 'Europe/Paris',
+  rateHistory?: BeneficiaryRateHistory[]
 ) {
   // Title
   doc.setFontSize(14);
@@ -595,6 +611,9 @@ function addFinancialSummaryToPage(
   doc.setFontSize(8);
   const rate25 = regularRate * 1.25;
   const rate100 = regularRate * 2.0;
+  const rateNote = rateHistory && rateHistory.length > 0
+    ? (language === 'fr' ? ' (Les tarifs peuvent varier selon la date)' : ' (Rates may vary by date)')
+    : '';
   doc.text(`${language === 'fr' ? 'Tarif Normal (Hors TVA)' : 'Regular Rate (Before VAT)'}: ${regularRate.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours de semaine 8h-20h' : 'Applied to: Weekdays 8 AM - 8 PM'}`, 14, startY + 6);
   doc.text(`${language === 'fr' ? 'Tarif Majoré +25% (Hors TVA)' : 'Holiday Rate +25% (Before VAT)'}: ${rate25.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: Jours fériés, dimanches, avant 8h ou après 20h' : 'Applied to: Holidays, Sundays, before 8 AM or after 8 PM'}`, 14, startY + 10);
   doc.text(`${language === 'fr' ? 'Tarif Majoré +100% (Hors TVA)' : 'Holiday Rate +100% (Before VAT)'}: ${rate100.toFixed(2)} ${currency}/h - ${language === 'fr' ? 'Appliqué à: 1er mai et 25 décembre' : 'Applied to: May 1st and Dec 25th'}`, 14, startY + 14);
@@ -618,6 +637,13 @@ function addFinancialSummaryToPage(
         const totalMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
         const name = pair.checkIn.caregiver_name;
 
+        // Get the applicable rate for this check-in date
+        const applicableRegularRate = rateHistory && rateHistory.length > 0
+          ? getRateForDate(rateHistory, start, regularRate, timezone)
+          : regularRate;
+        const applicableRate25 = applicableRegularRate * 1.25;
+        const applicableRate100 = applicableRegularRate * 2.0;
+
         if (pair.checkIn.is_training) {
           caregiverTrainingStats[name] = (caregiverTrainingStats[name] || 0) + (totalMinutes / 60);
         } else {
@@ -629,14 +655,14 @@ function addFinancialSummaryToPage(
               caregiver100HolidayStats[name] = { hours: 0, amount: 0 };
             }
             caregiver100HolidayStats[name].hours += totalMinutes / 60;
-            caregiver100HolidayStats[name].amount += (totalMinutes / 60) * rate100;
+            caregiver100HolidayStats[name].amount += (totalMinutes / 60) * applicableRate100;
           } else if (majoration === 0.25) {
             // 25% majoration (holidays/Sundays) - all hours
             if (!caregiver25HolidayStats[name]) {
               caregiver25HolidayStats[name] = { hours: 0, amount: 0 };
             }
             caregiver25HolidayStats[name].hours += totalMinutes / 60;
-            caregiver25HolidayStats[name].amount += (totalMinutes / 60) * rate25;
+            caregiver25HolidayStats[name].amount += (totalMinutes / 60) * applicableRate25;
           } else {
             // Regular weekday - split by time of day (8 AM - 8 PM regular, before/after 25%)
             // Convert to beneficiary's local timezone for time-of-day calculations
@@ -687,7 +713,7 @@ function addFinancialSummaryToPage(
                 caregiverRegularStats[name] = { hours: 0, amount: 0 };
               }
               caregiverRegularStats[name].hours += regularMinutes / 60;
-              caregiverRegularStats[name].amount += (regularMinutes / 60) * regularRate;
+              caregiverRegularStats[name].amount += (regularMinutes / 60) * applicableRegularRate;
             }
 
             // Add early morning and evening hours to 25% majoration
@@ -697,7 +723,7 @@ function addFinancialSummaryToPage(
                 caregiver25HolidayStats[name] = { hours: 0, amount: 0 };
               }
               caregiver25HolidayStats[name].hours += majoredMinutes / 60;
-              caregiver25HolidayStats[name].amount += (majoredMinutes / 60) * rate25;
+              caregiver25HolidayStats[name].amount += (majoredMinutes / 60) * applicableRate25;
             }
           }
         }
