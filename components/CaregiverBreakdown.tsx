@@ -85,10 +85,25 @@ export default function CaregiverBreakdown({
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
 
-  // Calculate display rates for UI (based on current regularRate)
-  // Note: Actual calculations use date-specific rates from rateHistory
-  const rate25 = regularRate * 1.25;
-  const rate100 = regularRate * 2.0;
+  // Calculate display rates for UI based on the selected month
+  // Use the rate that was effective at the start of the selected month
+  const displayRate = rateHistory && rateHistory.length > 0
+    ? getRateForDate(rateHistory, selectedMonth, regularRate, timezone)
+    : regularRate;
+
+  const rate25 = displayRate * 1.25;
+  const rate100 = displayRate * 2.0;
+
+  // Check if rates vary within the selected month (rate change mid-month)
+  const startOfSelectedMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
+  const endOfSelectedMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
+  const startMonthRate = rateHistory && rateHistory.length > 0
+    ? getRateForDate(rateHistory, startOfSelectedMonth, regularRate, timezone)
+    : regularRate;
+  const endMonthRate = rateHistory && rateHistory.length > 0
+    ? getRateForDate(rateHistory, endOfSelectedMonth, regularRate, timezone)
+    : regularRate;
+  const ratesVaryInMonth = startMonthRate !== endMonthRate;
 
   // Get all unique caregiver names for color fallback
   const allCaregiverNames = Array.from(new Set(checkIns.map(ci => ci.caregiver_name)));
@@ -424,7 +439,12 @@ export default function CaregiverBreakdown({
           {/* Regular Hours Table */}
           <div className="mb-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              {language === 'fr' ? 'Heures Normales HT' : 'Regular Hours (Before Tax)'} - {currency}{formatNumber(regularRate, 2, language)}/h
+              {language === 'fr' ? 'Heures Normales HT' : 'Regular Hours (Before Tax)'} - {currency}{formatNumber(displayRate, 2, language)}/h
+              {ratesVaryInMonth && (
+                <span className="ml-2 text-xs text-orange-600 font-normal">
+                  ({language === 'fr' ? 'tarif moyen, voir détails' : 'average rate, see details'})
+                </span>
+              )}
             </h3>
 
             <div className="md:hidden text-xs text-gray-500 mb-2 text-center">
@@ -520,6 +540,11 @@ export default function CaregiverBreakdown({
             <div className="mb-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-3">
                 {language === 'fr' ? 'Heures Majorées +25% HT' : 'Holiday Hours +25% (Before Tax)'} - {currency}{formatNumber(rate25, 2, language)}/h
+                {ratesVaryInMonth && (
+                  <span className="ml-2 text-xs text-orange-600 font-normal">
+                    ({language === 'fr' ? 'tarif moyen, voir détails' : 'average rate, see details'})
+                  </span>
+                )}
               </h3>
               <p className="text-sm text-gray-600 mb-3">
                 {language === 'fr'
@@ -621,6 +646,11 @@ export default function CaregiverBreakdown({
             <div className="mb-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-3">
                 {language === 'fr' ? 'Heures Majorées +100% HT' : 'Holiday Hours +100% (Before Tax)'} - {currency}{formatNumber(rate100, 2, language)}/h
+                {ratesVaryInMonth && (
+                  <span className="ml-2 text-xs text-orange-600 font-normal">
+                    ({language === 'fr' ? 'tarif moyen, voir détails' : 'average rate, see details'})
+                  </span>
+                )}
               </h3>
               <p className="text-sm text-gray-600 mb-3">
                 {language === 'fr'
@@ -978,7 +1008,10 @@ export default function CaregiverBreakdown({
               <div>
                 <p className="text-gray-600">
                   {language === 'fr' ? 'Tarif Normal (HT)' : 'Regular Rate (Before VAT)'}:
-                  <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(regularRate, 2, language)}/h</span>
+                  <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(displayRate, 2, language)}/h</span>
+                  {ratesVaryInMonth && (
+                    <span className="text-xs text-orange-600 ml-1">*</span>
+                  )}
                 </p>
                 <p className="text-gray-600 mt-1">
                   {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? 'Jours de semaine 8h-20h' : 'Weekdays 8 AM - 8 PM'}
@@ -988,6 +1021,9 @@ export default function CaregiverBreakdown({
                 <p className="text-gray-600">
                   {language === 'fr' ? 'Tarif Majoré +25% (HT)' : 'Holiday Rate +25% (Before VAT)'}:
                   <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(rate25, 2, language)}/h</span>
+                  {ratesVaryInMonth && (
+                    <span className="text-xs text-orange-600 ml-1">*</span>
+                  )}
                 </p>
                 <p className="text-gray-600 mt-1">
                   {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? 'Jours fériés, dimanches, avant 8h ou après 20h' : 'Holidays, Sundays, before 8 AM or after 8 PM'}
@@ -997,12 +1033,22 @@ export default function CaregiverBreakdown({
                 <p className="text-gray-600">
                   {language === 'fr' ? 'Tarif Majoré +100% (HT)' : 'Holiday Rate +100% (Before VAT)'}:
                   <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(rate100, 2, language)}/h</span>
+                  {ratesVaryInMonth && (
+                    <span className="text-xs text-orange-600 ml-1">*</span>
+                  )}
                 </p>
                 <p className="text-gray-600 mt-1">
                   {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? '1er mai et 25 décembre' : 'May 1st and Dec 25th'}
                 </p>
               </div>
             </div>
+            {ratesVaryInMonth && (
+              <p className="mt-3 text-xs text-orange-600">
+                * {language === 'fr'
+                  ? 'Les tarifs ont changé durant ce mois. Les montants affichés utilisent les tarifs historiques exacts pour chaque journée.'
+                  : 'Rates changed during this month. Displayed amounts use the exact historical rates for each day.'}
+              </p>
+            )}
           </div>
 
           <div className="mt-4 text-[10px] md:text-xs text-gray-500">
