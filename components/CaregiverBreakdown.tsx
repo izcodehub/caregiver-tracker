@@ -85,7 +85,10 @@ export default function CaregiverBreakdown({
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
 
-  // Note: Dynamic rates (rate25, rate100) are now calculated per check-in based on the applicable base rate
+  // Calculate display rates for UI (based on current regularRate)
+  // Note: Actual calculations use date-specific rates from rateHistory
+  const rate25 = regularRate * 1.25;
+  const rate100 = regularRate * 2.0;
 
   // Get all unique caregiver names for color fallback
   const allCaregiverNames = Array.from(new Set(checkIns.map(ci => ci.caregiver_name)));
@@ -208,8 +211,6 @@ export default function CaregiverBreakdown({
     caregiverMap.forEach((stats, name) => {
       // If no rate history, use the single regular rate (backward compatibility)
       if (!rateHistory || rateHistory.length === 0) {
-        const rate25 = regularRate * 1.25;
-        const rate100 = regularRate * 2.0;
         const regularAmount = stats.regularHours * regularRate;
         const holiday25Amount = stats.holiday25Hours * rate25;
         const holiday100Amount = stats.holiday100Hours * rate100;
