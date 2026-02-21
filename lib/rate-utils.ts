@@ -2,24 +2,24 @@ import { BeneficiaryRateHistory } from './supabase';
 import { formatInTimeZone } from 'date-fns-tz';
 
 /**
- * Gets the applicable rate for a beneficiary on a specific date.
- * Returns the rate with the most recent effective_date that is <= the target date.
+ * Gets the applicable rates for a beneficiary on a specific date.
+ * Returns billing rate, conventioned rate, and APA monthly hours with the most recent effective_date that is <= the target date.
  *
  * @param rateHistory - Array of rate history records for the beneficiary
  * @param targetDate - The date to get the rate for (can be Date object or ISO string)
  * @param fallbackRate - Fallback rate if no history is found (default: 15)
  * @param timezone - Timezone for date comparison (default: 'Europe/Paris')
- * @returns The applicable hourly rate
+ * @returns Object with billingRate, conventionedRate, and apaMonthlyHours. If conventionedRate is not set in history, defaults to billingRate.
  */
 export function getRateForDate(
   rateHistory: BeneficiaryRateHistory[],
   targetDate: Date | string,
   fallbackRate: number = 15,
   timezone: string = 'Europe/Paris'
-): number {
-  // If no rate history, use fallback
+): { billingRate: number; conventionedRate: number; apaMonthlyHours?: number } {
+  // If no rate history, use fallback for both rates
   if (!rateHistory || rateHistory.length === 0) {
-    return fallbackRate;
+    return { billingRate: fallbackRate, conventionedRate: fallbackRate, apaMonthlyHours: undefined };
   }
 
   // Convert target date to YYYY-MM-DD string in the beneficiary's timezone
@@ -34,7 +34,7 @@ export function getRateForDate(
 
   // If no applicable rates found, use fallback
   if (applicableRates.length === 0) {
-    return fallbackRate;
+    return { billingRate: fallbackRate, conventionedRate: fallbackRate, apaMonthlyHours: undefined };
   }
 
   // Sort by effective_date descending and get the most recent
@@ -42,7 +42,12 @@ export function getRateForDate(
     (a, b) => b.effective_date.localeCompare(a.effective_date)
   );
 
-  return sortedRates[0].rate;
+  const mostRecentRate = sortedRates[0];
+  return {
+    billingRate: mostRecentRate.rate,
+    conventionedRate: mostRecentRate.conventioned_rate ?? mostRecentRate.rate,
+    apaMonthlyHours: mostRecentRate.apa_monthly_hours
+  };
 }
 
 /**
@@ -64,12 +69,12 @@ export function groupCheckInsByRate<T extends { timestamp: string }>(
   const rateGroups = new Map<number, T[]>();
 
   for (const checkIn of checkIns) {
-    const rate = getRateForDate(rateHistory, checkIn.timestamp, fallbackRate, timezone);
+    const { billingRate } = getRateForDate(rateHistory, checkIn.timestamp, fallbackRate, timezone);
 
-    if (!rateGroups.has(rate)) {
-      rateGroups.set(rate, []);
+    if (!rateGroups.has(billingRate)) {
+      rateGroups.set(billingRate, []);
     }
-    rateGroups.get(rate)!.push(checkIn);
+    rateGroups.get(billingRate)!.push(checkIn);
   }
 
   return rateGroups;
@@ -92,6 +97,6 @@ export function calculateCostForDate(
   fallbackRate: number = 15,
   timezone: string = 'Europe/Paris'
 ): number {
-  const rate = getRateForDate(rateHistory, workDate, fallbackRate, timezone);
-  return hours * rate;
+  const { billingRate } = getRateForDate(rateHistory, workDate, fallbackRate, timezone);
+  return hours * billingRate;
 }

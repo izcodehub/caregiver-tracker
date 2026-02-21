@@ -68,6 +68,9 @@ export type Elderly = {
   family_ids: string[];
   regular_rate: number;
   holiday_rate: number;
+  conventioned_rate?: number; // Tarif de référence conventionné (HT) used for copay calculation
+  apa_monthly_hours?: number; // Monthly hours allocation from APA/PCH plan
+  apa_notes?: string; // Additional notes about APA coverage
   currency: string;
   access_code: string;
   created_at: string;
@@ -89,7 +92,9 @@ export type FamilyMember = {
 export type BeneficiaryRateHistory = {
   id: string;
   beneficiary_id: string;
-  rate: number;
+  rate: number; // Billing rate (what company charges)
+  conventioned_rate?: number; // APA/PCH reference rate for copay calculation
+  apa_monthly_hours?: number; // Monthly hours allocation for this period
   effective_date: string; // ISO date string (YYYY-MM-DD)
   created_at: string;
 };
