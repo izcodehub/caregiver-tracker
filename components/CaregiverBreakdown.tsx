@@ -91,12 +91,20 @@ export default function CaregiverBreakdown({
 
   // Calculate display rates for UI based on the selected month
   // Use the rate that was effective at the start of the selected month
-  const hasRateHistory = Boolean(rateHistory && rateHistory.length > 0);
-  const rateData = hasRateHistory
-    ? getRateForDate(rateHistory!, selectedMonth, regularRate, timezone)
-    : { billingRate: regularRate, conventionedRate: conventionedRate ?? regularRate, apaMonthlyHours: apaMonthlyHours };
+  let displayRate: number;
+  let displayConventionedRate: number;
+  let displayApaMonthlyHours: number | undefined;
 
-  const { billingRate: displayRate, conventionedRate: displayConventionedRate, apaMonthlyHours: displayApaMonthlyHours } = rateData;
+  if (rateHistory && rateHistory.length > 0) {
+    const rateData = getRateForDate(rateHistory, selectedMonth, regularRate, timezone);
+    displayRate = rateData.billingRate;
+    displayConventionedRate = rateData.conventionedRate;
+    displayApaMonthlyHours = rateData.apaMonthlyHours;
+  } else {
+    displayRate = regularRate;
+    displayConventionedRate = conventionedRate ?? regularRate;
+    displayApaMonthlyHours = apaMonthlyHours;
+  }
 
   console.log('[DEBUG CaregiverBreakdown] Rates:', {
     regularRate,
