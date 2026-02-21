@@ -49,9 +49,9 @@ function calculateCaregiverSummaries(
       const totalMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
 
       // Get the applicable rate for this check-in date
-      const applicableRegularRate = rateHistory && rateHistory.length > 0
+      const { billingRate: applicableRegularRate } = rateHistory && rateHistory.length > 0
         ? getRateForDate(rateHistory, start, regularRate, timezone)
-        : regularRate;
+        : { billingRate: regularRate };
       const applicableHolidayRate = applicableRegularRate * 1.25; // Holiday rate is always 25% more
 
       if (!caregiverMap.has(caregiverName)) {

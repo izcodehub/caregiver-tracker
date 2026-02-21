@@ -10,6 +10,7 @@ import { fr, enUS } from 'date-fns/locale';
 import { exportFinancialSummaryToCSV, exportDetailedCheckInsToCSV } from '@/lib/export';
 import { exportFinancialSummaryToPDF, exportDetailedCheckInsToPDF } from '@/lib/pdf-export';
 import { decimalToHHMM } from '@/lib/time-utils';
+import { getRateForDate } from '@/lib/rate-utils';
 import {
   Clock,
   User,
@@ -64,6 +65,8 @@ type Elderly = {
   regular_rate?: number;
   holiday_rate?: number;
   ticket_moderateur?: number;
+  conventioned_rate?: number; // Tarif de référence conventionné (HT) for copay split
+  apa_monthly_hours?: number; // Monthly hours allocation from APA/PCH plan
 };
 
 type FamilyMember = {
@@ -136,6 +139,7 @@ export default function DashboardPage() {
   const [currentStatus, setCurrentStatus] = useState<CurrentStatus | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  const [monthLoading, setMonthLoading] = useState(false);
   const [dailyNotes, setDailyNotes] = useState<DailyNote[]>([]);
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [selectedNoteDate, setSelectedNoteDate] = useState<Date | null>(null);
@@ -155,7 +159,13 @@ export default function DashboardPage() {
   const timezone = elderly ? getTimezoneForCountry(elderly.country) : 'Europe/Paris';
 
   useEffect(() => {
-    loadData();
+    if (loading) {
+      // Initial load
+      loadData();
+    } else {
+      // Month changed, only reload month-specific data
+      loadMonthData();
+    }
 
     // Subscribe to real-time updates
     const channel = supabase
@@ -168,7 +178,7 @@ export default function DashboardPage() {
           table: 'check_in_outs',
         },
         () => {
-          loadData();
+          loadMonthData();
         }
       )
       .subscribe();
@@ -294,6 +304,34 @@ export default function DashboardPage() {
     }
   };
 
+  const loadMonthData = async () => {
+    if (!elderly) return;
+
+    setMonthLoading(true);
+    try {
+      // Only load check-ins for selected month
+      const startDate = startOfMonth(selectedMonth);
+      const endDate = endOfMonth(selectedMonth);
+
+      const { data: checkInsData } = await supabase
+        .from('check_in_outs')
+        .select('*')
+        .eq('beneficiary_id', elderly.id)
+        .gte('timestamp', startDate.toISOString())
+        .lte('timestamp', endDate.toISOString())
+        .order('timestamp', { ascending: false });
+
+      setCheckIns(checkInsData || []);
+
+      // Load daily notes
+      await loadDailyNotes();
+    } catch (error) {
+      console.error('Error loading month data:', error);
+    } finally {
+      setMonthLoading(false);
+    }
+  };
+
   const loadData = async () => {
     try {
       // Load specific elderly data by ID
@@ -304,6 +342,12 @@ export default function DashboardPage() {
         .single();
 
       if (elderlyData) {
+        console.log('[DEBUG] Beneficiary data from DB:', {
+          name: elderlyData.name,
+          regular_rate: elderlyData.regular_rate,
+          conventioned_rate: elderlyData.conventioned_rate,
+          ticket_moderateur: elderlyData.ticket_moderateur
+        });
         setElderly(elderlyData);
 
         // Load rate history for time-based rates
@@ -313,6 +357,10 @@ export default function DashboardPage() {
           .eq('beneficiary_id', elderlyData.id)
           .order('effective_date', { ascending: false });
 
+        console.log('[DEBUG] Rate history from DB:', rateHistoryData?.map(r => ({
+          rate: r.rate,
+          effective_date: r.effective_date
+        })) || 'No rate history');
         setRateHistory(rateHistoryData || []);
 
         // Load family members
@@ -381,6 +429,7 @@ export default function DashboardPage() {
 
   const exportFinancialSummaryPDF = () => {
     if (!elderly) return;
+
     exportFinancialSummaryToPDF(
       checkIns,
       elderly.name,
@@ -391,7 +440,9 @@ export default function DashboardPage() {
       dailyNotes,
       language,
       timezone,
-      rateHistory
+      rateHistory,
+      elderly.conventioned_rate,
+      elderly.apa_monthly_hours
     );
   };
 
@@ -407,7 +458,8 @@ export default function DashboardPage() {
       elderly.currency || 'EUR',
       elderly.ticket_moderateur || 0,
       timezone,
-      rateHistory
+      rateHistory,
+      elderly.conventioned_rate
     );
   };
 
@@ -1096,6 +1148,7 @@ export default function DashboardPage() {
               selectedMonth={selectedMonth}
               regularRate={elderly.regular_rate || 15}
               rateHistory={rateHistory}
+              conventionedRate={elderly.conventioned_rate}
               currency={elderly.currency || 'EUR'}
               copayPercentage={elderly.ticket_moderateur || 0}
               caregiverColors={caregiverColors}
@@ -1819,6 +1872,16 @@ export default function DashboardPage() {
           />
         );
       })()}
+
+      {/* Month Loading Overlay */}
+      {monthLoading && (
+        <div className="fixed inset-0 bg-white bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-2xl p-8 flex flex-col items-center border-2 border-gray-200">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
+            <p className="text-gray-700 font-semibold text-lg">{language === 'fr' ? 'Chargement...' : 'Loading...'}</p>
+          </div>
+        </div>
+      )}
 
     </div>
   );

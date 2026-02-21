@@ -64,6 +64,8 @@ type CaregiverBreakdownProps = {
   selectedMonth: Date;
   regularRate: number;
   rateHistory?: BeneficiaryRateHistory[]; // Optional for backward compatibility
+  conventionedRate?: number; // Tarif de référence conventionné (HT); copay% applies only up to this rate
+  apaMonthlyHours?: number; // APA monthly hours allowance (plan d'aide)
   currency: string;
   copayPercentage: number;
   caregiverColors: Map<string, string>;
@@ -76,6 +78,8 @@ export default function CaregiverBreakdown({
   selectedMonth,
   regularRate,
   rateHistory,
+  conventionedRate,
+  apaMonthlyHours,
   currency,
   copayPercentage,
   caregiverColors,
@@ -87,9 +91,19 @@ export default function CaregiverBreakdown({
 
   // Calculate display rates for UI based on the selected month
   // Use the rate that was effective at the start of the selected month
-  const displayRate = rateHistory && rateHistory.length > 0
+  const { billingRate: displayRate, conventionedRate: displayConventionedRate, apaMonthlyHours: displayApaMonthlyHours } = rateHistory && rateHistory.length > 0
     ? getRateForDate(rateHistory, selectedMonth, regularRate, timezone)
-    : regularRate;
+    : { billingRate: regularRate, conventionedRate: conventionedRate ?? regularRate, apaMonthlyHours: apaMonthlyHours };
+
+  console.log('[DEBUG CaregiverBreakdown] Rates:', {
+    regularRate,
+    displayRate,
+    displayConventionedRate,
+    conventionedRateProp: conventionedRate,
+    hasRateHistory: rateHistory && rateHistory.length > 0,
+    rateHistoryCount: rateHistory?.length || 0,
+    selectedMonth: selectedMonth.toISOString()
+  });
 
   const rate25 = displayRate * 1.25;
   const rate100 = displayRate * 2.0;
@@ -97,12 +111,12 @@ export default function CaregiverBreakdown({
   // Check if rates vary within the selected month (rate change mid-month)
   const startOfSelectedMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
   const endOfSelectedMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
-  const startMonthRate = rateHistory && rateHistory.length > 0
+  const { billingRate: startMonthRate } = rateHistory && rateHistory.length > 0
     ? getRateForDate(rateHistory, startOfSelectedMonth, regularRate, timezone)
-    : regularRate;
-  const endMonthRate = rateHistory && rateHistory.length > 0
+    : { billingRate: regularRate };
+  const { billingRate: endMonthRate } = rateHistory && rateHistory.length > 0
     ? getRateForDate(rateHistory, endOfSelectedMonth, regularRate, timezone)
-    : regularRate;
+    : { billingRate: regularRate };
   const ratesVaryInMonth = startMonthRate !== endMonthRate;
 
   // Get all unique caregiver names for color fallback
@@ -272,7 +286,7 @@ export default function CaregiverBreakdown({
           const totalMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
 
           // Get the rate that was effective on this check-in date
-          const applicableRate = getRateForDate(rateHistory, start, regularRate, timezone);
+          const { billingRate: applicableRate } = getRateForDate(rateHistory, start, regularRate, timezone);
           const rate25 = applicableRate * 1.25;
           const rate100 = applicableRate * 2.0;
 
@@ -281,9 +295,11 @@ export default function CaregiverBreakdown({
           const publicHolidayMajoration = getHolidayMajoration(dateStr);
 
           if (publicHolidayMajoration === 1.0) {
-            holiday100Amount += (totalMinutes / 60) * rate100;
+            const hours = totalMinutes / 60;
+            holiday100Amount += hours * rate100;
           } else if (publicHolidayMajoration === 0.25) {
-            holiday25Amount += (totalMinutes / 60) * rate25;
+            const hours = totalMinutes / 60;
+            holiday25Amount += hours * rate25;
           } else {
             // Time-of-day calculation (same as before)
             const startLocal = toZonedTime(start, timezone);
@@ -320,8 +336,10 @@ export default function CaregiverBreakdown({
               eveningMinutes = totalMinutes;
             }
 
-            regularAmount += (regularMinutes / 60) * applicableRate;
-            holiday25Amount += ((earlyMorningMinutes + eveningMinutes) / 60) * rate25;
+            const regularHours = regularMinutes / 60;
+            const majoredHours = (earlyMorningMinutes + eveningMinutes) / 60;
+            regularAmount += regularHours * applicableRate;
+            holiday25Amount += majoredHours * rate25;
           }
         });
 
@@ -425,7 +443,7 @@ export default function CaregiverBreakdown({
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
-      <h2 className="text-lg md:text-xl font-semibold text-gray-800 mb-4">
+      <h2 className="text-lg md:text-xl font-semibold text-gray-800 mb-4 uppercase">
         {t('financial.title')} - {format(selectedMonth, 'MMMM yyyy', { locale })}
       </h2>
 
@@ -436,512 +454,421 @@ export default function CaregiverBreakdown({
         </div>
       ) : (
         <>
-          {/* Regular Hours Table */}
-          <div className="mb-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              {language === 'fr' ? 'Heures Normales HT' : 'Regular Hours (Before Tax)'} - {currency}{formatNumber(displayRate, 2, language)}/h
-              {ratesVaryInMonth && (
-                <span className="ml-2 text-xs text-orange-600 font-normal">
-                  ({language === 'fr' ? 'tarif moyen, voir détails' : 'average rate, see details'})
-                </span>
-              )}
-            </h3>
+{/* RÉSUMÉ FINANCIER */}
+{copayPercentage > 0 && (() => {
+  // Calculate per-hour rates for display
+  const rate25 = displayRate * 1.25;
+  const rate100 = displayRate * 2.0;
 
-            <div className="md:hidden text-xs text-gray-500 mb-2 text-center">
-              ← Swipe to see all columns →
+  // APA coverage per hour (constant regardless of majoration)
+  const apaPerHour = displayConventionedRate * (1 - copayPercentage / 100);
+
+  // Beneficiary per hour calculations
+  const rateExcess = Math.max(0, displayRate - displayConventionedRate);
+  const benefCopay = displayConventionedRate * (copayPercentage / 100);
+  const benefNormal = benefCopay + rateExcess;
+  const benef25 = benefNormal + (displayRate * 0.25);
+  const benef100 = benefNormal + (displayRate * 1.0);
+
+  // Total calculations
+  const totalCalendarHours = totals.regularHours + totals.holiday25Hours + totals.holiday100Hours;
+  const conventionedBaseHT = totalCalendarHours * displayConventionedRate;
+  const apaHT = conventionedBaseHT * (1 - copayPercentage / 100);
+  const benefHT = totals.totalAmount - apaHT;
+
+  // Format helper
+  const f = (ht: number) => ({
+    ht: formatNumber(ht, 2, language),
+    tva: formatNumber(ht * 0.055, 2, language),
+    ttc: formatNumber(ht * 1.055, 2, language),
+  });
+
+  const totalFmt = f(totals.totalAmount);
+  const apaFmt = f(apaHT);
+  const benefFmt = f(benefHT);
+
+  // APA allowance calculations
+  const apaAllowanceValue = displayApaMonthlyHours ? displayApaMonthlyHours * displayConventionedRate : undefined;
+  const apaHoursRemaining = displayApaMonthlyHours ? displayApaMonthlyHours - totals.totalHours : undefined;
+  const apaValueConsumed = conventionedBaseHT;
+  const apaValueRemaining = apaAllowanceValue ? apaAllowanceValue - apaValueConsumed : undefined;
+  const apaUsagePercent = displayApaMonthlyHours ? (totals.totalHours / displayApaMonthlyHours) * 100 : undefined;
+
+  // Group caregivers by hour type
+  const caregiversByType = {
+    regular: [] as { name: string; hours: number; amount: number }[],
+    holiday25: [] as { name: string; hours: number; amount: number; dates: string[] }[],
+    holiday100: [] as { name: string; hours: number; amount: number; dates: string[] }[],
+  };
+
+  calculateHoursPerCaregiver().forEach(cg => {
+    if (cg.regularHours > 0) {
+      caregiversByType.regular.push({
+        name: cg.name,
+        hours: cg.regularHours,
+        amount: cg.regularAmount,
+      });
+    }
+    if (cg.holiday25Hours > 0) {
+      caregiversByType.holiday25.push({
+        name: cg.name,
+        hours: cg.holiday25Hours,
+        amount: cg.holiday25Amount,
+        dates: [], // TODO: extract dates from check-ins
+      });
+    }
+    if (cg.holiday100Hours > 0) {
+      caregiversByType.holiday100.push({
+        name: cg.name,
+        hours: cg.holiday100Hours,
+        amount: cg.holiday100Amount,
+        dates: [], // TODO: extract dates from check-ins
+      });
+    }
+  });
+
+  const monthName = format(selectedMonth, 'MMMM yyyy', { locale });
+
+  return (
+    <div className="mt-6 space-y-6">
+      {/* AT A GLANCE SECTION TITLE */}
+      <div className="border-t-4 border-gray-400 pt-4">
+        <h2 className="text-xl font-bold text-gray-800 uppercase mb-4">
+          {language === 'fr' ? 'En un coup d\'œil' : 'At a Glance'}
+        </h2>
+      </div>
+
+      {/* AT A GLANCE - TOTALS AND HOUR DETAILS side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* TOTALS CARD - Left */}
+        <div className="flex flex-col">
+          <div className="bg-slate-50 p-4 md:p-6 rounded-t space-y-2 text-sm md:text-base text-slate-800 border-2 border-slate-200 border-b-0">
+            <h3 className="text-base md:text-lg font-semibold text-slate-800 mb-3">
+              {language === 'fr' ? `TOTAUX DU MOIS DE ${monthName.toUpperCase()}` : `MONTHLY TOTALS - ${monthName.toUpperCase()}`}
+            </h3>
+            <div className="flex justify-between">
+              <span>{language === 'fr' ? 'Heures totales:' : 'Total hours:'}</span>
+              <span className="font-mono font-semibold">{formatNumber(totals.totalHours, 2, language)}h ({decimalToHHMM(totals.totalHours)})</span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full md:min-w-[600px]">
+            <div className="border-t-2 border-slate-300 pt-2 mt-2"></div>
+
+            <div className="flex justify-between">
+              <span>{language === 'fr' ? 'Facturation totale:' : 'Total billing:'}</span>
+              <span className="font-mono">{currency}{totalFmt.ht}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>TVA (5,5%):</span>
+              <span className="font-mono">{currency}{totalFmt.tva}</span>
+            </div>
+            <div className="flex justify-between font-bold text-lg border-t border-slate-400 pt-1">
+              <span>TOTAL TTC:</span>
+              <span className="font-mono">{currency}{totalFmt.ttc}</span>
+            </div>
+
+            <div className="border-t-2 border-slate-400 pt-2 mt-2"></div>
+
+            <div className="flex justify-between text-teal-700">
+              <span>✓ {language === 'fr' ? 'Part APA:' : 'APA share:'}</span>
+              <span className="font-mono font-semibold">{currency}{apaFmt.ht} ({currency}{apaFmt.ttc} TTC)</span>
+            </div>
+            <div className="flex justify-between text-amber-700">
+              <span>✗ {language === 'fr' ? 'Part bénéficiaire:' : 'Beneficiary share:'}</span>
+              <span className="font-mono font-semibold">{currency}{benefFmt.ht} ({currency}{benefFmt.ttc} TTC)</span>
+            </div>
+          </div>
+
+          {/* Payment box - stretches to fill remaining height */}
+          <div className="flex-1 border-t-2 border-blue-200 bg-blue-50 p-6 rounded-b border-2 border-slate-200 border-t-blue-200 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-sm font-bold text-gray-800 mb-1">
+                {language === 'fr' ? 'LE BÉNÉFICIAIRE DOIT PAYER' : 'BENEFICIARY MUST PAY'}
+              </p>
+              <p className="text-3xl font-bold text-gray-800">
+                {currency}{benefFmt.ttc}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* HOUR DETAILS - Right */}
+        <div className="space-y-4">
+          {/* REGULAR HOURS - Always shown on top */}
+          {caregiversByType.regular.length > 0 && (
+            <div>
+              <div className="bg-teal-100 px-3 py-2 font-semibold text-gray-800 border-b-2 border-teal-200">
+                {language === 'fr' ? 'HEURES NORMALES' : 'NORMAL HOURS'} - {formatNumber(displayRate, 2, language)}€ HT/h
+              </div>
+              <table className="w-full text-xs md:text-sm">
                 <thead>
-                  <tr className="border-b-2 border-gray-300">
-                    <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10">
-                      {t('financial.caregiver')}
-                    </th>
-                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
-                      <div className="md:whitespace-nowrap">
-                        <div>{language === 'fr' ? 'Heures' : 'Hours'}</div>
-                      </div>
-                      <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
-                    </th>
-                    <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
-                      <div className="md:whitespace-nowrap">
-                        <div>{language === 'fr' ? 'Montant' : 'Amount'}</div>
-                      </div>
-                    </th>
+                  <tr className="border-b border-gray-300 bg-teal-50 text-gray-800">
+                    <th className="text-left p-2">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'Heures' : 'Hours'}</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'Facturé' : 'Billed'}</th>
+                    <th className="text-right p-2">APA</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'Bénéfic.' : 'Benef.'}</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {summaries.filter(s => s.regularHours > 0).map((summary, idx) => {
-                    const color = getColor(summary.name, caregiverColors, allCaregiverNames);
-                    return (
-                      <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="py-2 md:py-3 px-1 md:px-2 font-medium text-xs md:text-sm sticky left-0 bg-white w-1 whitespace-nowrap">
-                          <span
-                            className="px-2 py-1 rounded font-semibold"
-                            style={{
-                              color: color,
-                              backgroundColor: hexToRgba(color, 0.15)
-                            }}
-                          >
-                            {summary.name}
-                          </span>
-                        </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                        <div>{formatNumber(summary.regularHours, 2, language)}h</div>
-                        <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.regularHours)}</div>
+                <tbody className="text-gray-800">
+                  {caregiversByType.regular.map((cg, idx) => (
+                    <tr key={idx} className="border-b border-gray-200 bg-white">
+                      <td className="p-2">{cg.name}</td>
+                      <td className="text-right p-2 font-mono">
+                        {formatNumber(cg.hours, 2, language)}h<br/>
+                        <span className="text-[10px] text-gray-500">{decimalToHHMM(cg.hours)}</span>
                       </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                        {currency}{formatNumber(summary.regularAmount, 2, language)}
-                      </td>
+                      <td className="text-right p-2 font-mono">{formatNumber(cg.amount, 2, language)}€</td>
+                      <td className="text-right p-2 font-mono">{formatNumber(cg.hours * apaPerHour, 2, language)}€</td>
+                      <td className="text-right p-2 font-mono">{formatNumber(cg.hours * benefNormal, 2, language)}€</td>
                     </tr>
-                  );
-                  })}
-                  {/* Total Hours Row */}
-                  <tr className="border-t border-gray-300 bg-blue-50">
-                    <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-blue-50 w-1 whitespace-nowrap">
-                      {language === 'fr' ? 'Total' : 'Total'}
+                  ))}
+                  <tr className="border-t-2 border-teal-200 bg-teal-100 text-gray-800 font-semibold">
+                    <td className="p-2">TOTAL</td>
+                    <td className="text-right p-2 font-mono">
+                      {formatNumber(totals.regularHours, 2, language)}h<br/>
+                      <span className="text-[10px]">{decimalToHHMM(totals.regularHours)}</span>
                     </td>
-                    <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
-                      <div>{formatNumber(totals.regularHours, 2, language)}h</div>
-                      <div className="text-[10px] md:text-xs text-gray-600">{decimalToHHMM(totals.regularHours)}</div>
+                    <td className="text-right p-2 font-mono">{formatNumber(totals.regularAmount, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(totals.regularHours * apaPerHour, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(totals.regularHours * benefNormal, 2, language)}€</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* +25% hours - only show if there are any */}
+          {caregiversByType.holiday25.length > 0 && totals.holiday25Hours > 0 && (
+            <div>
+              <div className="bg-teal-600 px-3 py-2 text-white border-b-2 border-teal-700 font-semibold">
+                {language === 'fr' ? 'HEURES MAJORÉES +25%' : 'PREMIUM HOURS +25%'} - {formatNumber(rate25, 2, language)}€ HT/h
+                <span className="text-xs font-normal ml-2">
+                  ({language === 'fr' ? 'Dimanches, jours fériés, avant 8h ou après 20h' : 'Sundays, holidays, before 8 AM or after 8 PM'})
+                </span>
+              </div>
+              <table className="w-full text-xs md:text-sm">
+                <thead>
+                  <tr className="border-b border-gray-300 bg-teal-500 text-white">
+                    <th className="text-left p-2">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'Heures' : 'Hours'}</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'Facturé' : 'Billed'}</th>
+                    <th className="text-right p-2">APA</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'Bénéfic.' : 'Benef.'}</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-800">
+                  {caregiversByType.holiday25.map((cg, idx) => (
+                    <tr key={idx} className="border-b border-gray-200 bg-white">
+                      <td className="p-2 align-top">
+                        {cg.name}
+                        {cg.dates.length > 0 && (
+                          <div className="text-[10px] text-gray-500 mt-1">
+                            📅 {cg.dates.map((d, i) => <div key={i}>{d}</div>)}
+                          </div>
+                        )}
+                      </td>
+                      <td className="text-right p-2 font-mono align-top">
+                        {formatNumber(cg.hours, 2, language)}h<br/>
+                        <span className="text-[10px] text-gray-500">{decimalToHHMM(cg.hours)}</span>
+                      </td>
+                      <td className="text-right p-2 font-mono align-top">{formatNumber(cg.amount, 2, language)}€</td>
+                      <td className="text-right p-2 font-mono align-top">{formatNumber(cg.hours * apaPerHour, 2, language)}€</td>
+                      <td className="text-right p-2 font-mono align-top">{formatNumber(cg.hours * benef25, 2, language)}€</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t-2 border-teal-700 bg-teal-600 text-white font-semibold">
+                    <td className="p-2">TOTAL</td>
+                    <td className="text-right p-2 font-mono">
+                      {formatNumber(totals.holiday25Hours, 2, language)}h<br/>
+                      <span className="text-[10px]">{decimalToHHMM(totals.holiday25Hours)}</span>
                     </td>
-                    <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
-                      {currency}{formatNumber(totals.regularAmount, 2, language)}
+                    <td className="text-right p-2 font-mono">{formatNumber(totals.holiday25Amount, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(totals.holiday25Hours * apaPerHour, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(totals.holiday25Hours * benef25, 2, language)}€</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* +100% hours - only show if there are any */}
+          {caregiversByType.holiday100.length > 0 && totals.holiday100Hours > 0 && (
+            <div>
+              <div className="bg-teal-700 px-3 py-2 text-white border-b-2 border-teal-800 font-semibold">
+                {language === 'fr' ? 'HEURES MAJORÉES +100%' : 'PREMIUM HOURS +100%'} - {formatNumber(rate100, 2, language)}€ HT/h
+                <span className="text-xs font-normal ml-2">
+                  ({language === 'fr' ? '1er mai et 25 décembre uniquement' : 'May 1st and December 25th only'})
+                </span>
+              </div>
+              <table className="w-full text-xs md:text-sm">
+                <thead>
+                  <tr className="border-b border-gray-300 bg-teal-600 text-white">
+                    <th className="text-left p-2">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'Heures' : 'Hours'}</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'Facturé' : 'Billed'}</th>
+                    <th className="text-right p-2">APA</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'Bénéfic.' : 'Benef.'}</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-800">
+                  {caregiversByType.holiday100.map((cg, idx) => (
+                    <tr key={idx} className="border-b border-gray-200 bg-white">
+                      <td className="p-2 align-top">
+                        {cg.name}
+                        {cg.dates.length > 0 && (
+                          <div className="text-[10px] text-gray-500 mt-1">
+                            📅 {cg.dates.map((d, i) => <div key={i}>{d}</div>)}
+                          </div>
+                        )}
+                      </td>
+                      <td className="text-right p-2 font-mono align-top">
+                        {formatNumber(cg.hours, 2, language)}h<br/>
+                        <span className="text-[10px] text-gray-500">{decimalToHHMM(cg.hours)}</span>
+                      </td>
+                      <td className="text-right p-2 font-mono align-top">{formatNumber(cg.amount, 2, language)}€</td>
+                      <td className="text-right p-2 font-mono align-top">{formatNumber(cg.hours * apaPerHour, 2, language)}€</td>
+                      <td className="text-right p-2 font-mono align-top">{formatNumber(cg.hours * benef100, 2, language)}€</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t-2 border-teal-800 bg-teal-700 text-white font-semibold">
+                    <td className="p-2">TOTAL</td>
+                    <td className="text-right p-2 font-mono">
+                      {formatNumber(totals.holiday100Hours, 2, language)}h<br/>
+                      <span className="text-[10px]">{decimalToHHMM(totals.holiday100Hours)}</span>
+                    </td>
+                    <td className="text-right p-2 font-mono">{formatNumber(totals.holiday100Amount, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(totals.holiday100Hours * apaPerHour, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(totals.holiday100Hours * benef100, 2, language)}€</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* TRACKING SECTION */}
+      <div className="border-t-4 border-gray-400 pt-4">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">
+          {language === 'fr' ? 'SUIVI' : 'TRACKING'}
+        </h3>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          {/* TARIFS APPLICABLES - Left */}
+          <div>
+            <div className="bg-slate-50 p-4 md:p-6 rounded space-y-2 text-sm md:text-base border-2 border-slate-200 h-full">
+              <h3 className="text-base md:text-lg font-semibold text-slate-800 mb-3">
+                {language === 'fr' ? `TARIFS ${selectedMonth.getFullYear()}` : `${selectedMonth.getFullYear()} RATES`}
+                {ratesVaryInMonth && (
+                  <span className="text-xs font-normal text-amber-700 ml-2">
+                    ⚠ {language === 'fr' ? 'Variables ce mois' : 'Variable this month'}
+                  </span>
+                )}
+              </h3>
+              <table className="w-full text-xs md:text-sm">
+                <thead>
+                  <tr className="border-b-2 border-slate-600 bg-slate-600 text-white">
+                    <th className="text-left p-2">{language === 'fr' ? 'Type d\'heure' : 'Hour type'}</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'Vitalliance facture' : 'Company bills'}</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'APA couvre' : 'APA covers'}</th>
+                    <th className="text-right p-2">{language === 'fr' ? 'Bénéficiaire paie' : 'Beneficiary pays'}</th>
+                  </tr>
+                </thead>
+                <tbody className="text-slate-800">
+                  <tr className="border-b border-slate-300 bg-white">
+                    <td className="p-2">
+                      <div className="font-medium">{language === 'fr' ? 'Normal' : 'Normal'}</div>
+                      <div className="text-[10px] text-slate-600">{language === 'fr' ? 'Jours de semaine 8h-20h' : 'Weekdays 8am-8pm'}</div>
+                    </td>
+                    <td className="text-right p-2 font-mono">{formatNumber(displayRate, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(apaPerHour, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(benefNormal, 2, language)}€</td>
+                  </tr>
+                  <tr className="border-b border-slate-300 bg-slate-50">
+                    <td className="p-2">
+                      <div className="font-medium">{language === 'fr' ? 'Majoré +25%' : 'Premium +25%'}</div>
+                      <div className="text-[10px] text-slate-600">{language === 'fr' ? 'Jours fériés, dimanches, avant 8h ou après 20h' : 'Holidays, Sundays, before 8am or after 8pm'}</div>
+                    </td>
+                    <td className="text-right p-2 font-mono">{formatNumber(rate25, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(apaPerHour, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">
+                      <div>{formatNumber(benef25, 2, language)}€</div>
+                      <div className="text-[10px] text-slate-500">({formatNumber(benefNormal, 2, language)} + {formatNumber(displayRate * 0.25, 2, language)})</div>
                     </td>
                   </tr>
-                  {/* TVA Row */}
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <td colSpan={2} className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-600 text-xs md:text-sm whitespace-nowrap">
-                      {language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}
+                  <tr className="border-b border-slate-300 bg-white">
+                    <td className="p-2">
+                      <div className="font-medium">{language === 'fr' ? 'Majoré +100%' : 'Premium +100%'}</div>
+                      <div className="text-[10px] text-slate-600">{language === 'fr' ? '1er mai et 25 décembre' : 'May 1st and December 25th'}</div>
                     </td>
-                    <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                      {currency}{formatNumber(totals.regularAmount * 0.055, 2, language)}
+                    <td className="text-right p-2 font-mono">{formatNumber(rate100, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(apaPerHour, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">
+                      <div>{formatNumber(benef100, 2, language)}€</div>
+                      <div className="text-[10px] text-slate-500">({formatNumber(benefNormal, 2, language)} + {formatNumber(displayRate, 2, language)})</div>
                     </td>
                   </tr>
                 </tbody>
-                <tfoot>
-                  {/* Grand Total Row */}
-                  <tr className="border-t-2 border-gray-400 bg-green-50">
-                    <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base whitespace-nowrap">
-                      {language === 'fr' ? 'TOTAL TTC' : 'TOTAL INC. VAT'}
-                    </td>
-                    <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl w-1 whitespace-nowrap">
-                      {currency}{formatNumber(totals.regularAmount * 1.055, 2, language)}
-                    </td>
-                  </tr>
-                </tfoot>
               </table>
             </div>
           </div>
 
-          {/* Holiday 25% Hours Table - Only show if there are holiday25 hours */}
-          {totals.holiday25Hours > 0 && (
-            <div className="mb-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                {language === 'fr' ? 'Heures Majorées +25% HT' : 'Holiday Hours +25% (Before Tax)'} - {currency}{formatNumber(rate25, 2, language)}/h
-                {ratesVaryInMonth && (
-                  <span className="ml-2 text-xs text-orange-600 font-normal">
-                    ({language === 'fr' ? 'tarif moyen, voir détails' : 'average rate, see details'})
+          {/* Right column - APA and NOTES stacked */}
+          <div className="space-y-6">
+            {/* APA ALLOWANCE */}
+            {displayApaMonthlyHours && (
+              <div>
+              <div className="bg-slate-50 p-4 md:p-6 rounded space-y-3 text-sm md:text-base border-2 border-slate-200 text-slate-800 h-full">
+                <h3 className="text-base md:text-lg font-semibold text-slate-800 mb-3">
+                  {language === 'fr' ? 'UTILISATION MENSUELLE DU PLAN D\'AIDE APA' : 'MONTHLY APA ALLOWANCE USAGE'}
+                </h3>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">{language === 'fr' ? 'Heures utilisées:' : 'Hours used:'}</span>
+                  <span className="font-mono text-lg">
+                    {formatNumber(totals.totalHours, 2, language)}h / {formatNumber(displayApaMonthlyHours, 2, language)}h
+                    {apaUsagePercent && <span className="text-sm text-slate-600 ml-2">({formatNumber(apaUsagePercent, 1, language)}%)</span>}
                   </span>
+                </div>
+
+                {apaHoursRemaining !== undefined && (
+                  <div className="flex justify-between text-sm">
+                    <span>{language === 'fr' ? 'Heures restantes:' : 'Remaining hours:'}</span>
+                    <span className="font-mono">{formatNumber(apaHoursRemaining, 2, language)}h <span className="text-slate-500">({language === 'fr' ? 'non reportables au mois suivant' : 'not rollover to next month'})</span></span>
+                  </div>
                 )}
-              </h3>
-              <p className="text-sm text-gray-600 mb-3">
-                {language === 'fr'
-                  ? 'Jours fériés, dimanches et après 20h00'
-                  : 'Public holidays, Sundays, and after 8:00 PM'}
-              </p>
 
-              <div className="md:hidden text-xs text-gray-500 mb-2 text-center">
-                ← Swipe to see all columns →
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full md:min-w-[600px]">
-                  <thead>
-                    <tr className="border-b-2 border-gray-300">
-                      <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10">
-                        {t('financial.caregiver')}
-                      </th>
-                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
-                        <div className="md:whitespace-nowrap">
-                          <div>{language === 'fr' ? 'Heures' : 'Hours'}</div>
-                        </div>
-                        <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
-                      </th>
-                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
-                        <div className="md:whitespace-nowrap">
-                          <div>{language === 'fr' ? 'Montant' : 'Amount'}</div>
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summaries.filter(s => s.holiday25Hours > 0).map((summary, idx) => {
-                      const color = getColor(summary.name, caregiverColors, allCaregiverNames);
-                      return (
-                        <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="py-2 md:py-3 px-1 md:px-2 font-medium text-xs md:text-sm sticky left-0 bg-white w-1 whitespace-nowrap">
-                            <span
-                              className="px-2 py-1 rounded font-semibold"
-                              style={{
-                                color: color,
-                                backgroundColor: hexToRgba(color, 0.15)
-                              }}
-                            >
-                              {summary.name}
-                            </span>
-                          </td>
-                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                          <div>{formatNumber(summary.holiday25Hours, 2, language)}h</div>
-                          <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.holiday25Hours)}</div>
-                        </td>
-                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                          {currency}{formatNumber(summary.holiday25Amount, 2, language)}
-                        </td>
-                      </tr>
-                    );
-                    })}
-                    {/* Total Hours Row */}
-                    <tr className="border-t border-gray-300 bg-yellow-50">
-                      <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-yellow-50 w-1 whitespace-nowrap">
-                        {language === 'fr' ? 'Total' : 'Total'}
-                      </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
-                        <div>{formatNumber(totals.holiday25Hours, 2, language)}h</div>
-                        <div className="text-[10px] md:text-xs text-gray-600">{decimalToHHMM(totals.holiday25Hours)}</div>
-                      </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
-                        {currency}{formatNumber(totals.holiday25Amount, 2, language)}
-                      </td>
-                    </tr>
-                    {/* TVA Row */}
-                    <tr className="border-b border-gray-200 bg-gray-50">
-                      <td colSpan={2} className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-600 text-xs md:text-sm whitespace-nowrap">
-                        {language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}
-                      </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                        {currency}{formatNumber(totals.holiday25Amount * 0.055, 2, language)}
-                      </td>
-                    </tr>
-                  </tbody>
-                  <tfoot>
-                    {/* Grand Total Row */}
-                    <tr className="border-t-2 border-gray-400 bg-green-50">
-                      <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base whitespace-nowrap">
-                        {language === 'fr' ? 'TOTAL TTC' : 'TOTAL INC. VAT'}
-                      </td>
-                      <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl w-1 whitespace-nowrap">
-                        {currency}{formatNumber(totals.holiday25Amount * 1.055, 2, language)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Holiday 100% Hours Table - Only show if there are holiday100 hours */}
-          {totals.holiday100Hours > 0 && (
-            <div className="mb-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                {language === 'fr' ? 'Heures Majorées +100% HT' : 'Holiday Hours +100% (Before Tax)'} - {currency}{formatNumber(rate100, 2, language)}/h
-                {ratesVaryInMonth && (
-                  <span className="ml-2 text-xs text-orange-600 font-normal">
-                    ({language === 'fr' ? 'tarif moyen, voir détails' : 'average rate, see details'})
-                  </span>
-                )}
-              </h3>
-              <p className="text-sm text-gray-600 mb-3">
-                {language === 'fr'
-                  ? '1er mai et 25 décembre uniquement'
-                  : 'May 1st and December 25th only'}
-              </p>
-
-              <div className="md:hidden text-xs text-gray-500 mb-2 text-center">
-                ← Swipe to see all columns →
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full md:min-w-[600px]">
-                  <thead>
-                    <tr className="border-b-2 border-gray-300">
-                      <th className="text-left py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm sticky left-0 bg-white z-10">
-                        {t('financial.caregiver')}
-                      </th>
-                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
-                        <div className="md:whitespace-nowrap">
-                          <div>{language === 'fr' ? 'Heures' : 'Hours'}</div>
-                        </div>
-                        <div className="text-[10px] md:text-xs font-normal text-gray-500">({t('financial.decimal')} / {t('financial.timeFormat')})</div>
-                      </th>
-                      <th className="text-right py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-700 text-xs md:text-sm">
-                        <div className="md:whitespace-nowrap">
-                          <div>{language === 'fr' ? 'Montant' : 'Amount'}</div>
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summaries.filter(s => s.holiday100Hours > 0).map((summary, idx) => {
-                      const color = getColor(summary.name, caregiverColors, allCaregiverNames);
-                      return (
-                        <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="py-2 md:py-3 px-1 md:px-2 font-medium text-xs md:text-sm sticky left-0 bg-white w-1 whitespace-nowrap">
-                            <span
-                              className="px-2 py-1 rounded font-semibold"
-                              style={{
-                                color: color,
-                                backgroundColor: hexToRgba(color, 0.15)
-                              }}
-                            >
-                              {summary.name}
-                            </span>
-                          </td>
-                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                          <div>{formatNumber(summary.holiday100Hours, 2, language)}h</div>
-                          <div className="text-[10px] md:text-xs text-gray-500">{decimalToHHMM(summary.holiday100Hours)}</div>
-                        </td>
-                        <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                          {currency}{formatNumber(summary.holiday100Amount, 2, language)}
-                        </td>
-                      </tr>
-                    );
-                    })}
-                    {/* Total Hours Row */}
-                    <tr className="border-t border-gray-300 bg-red-50">
-                      <td className="py-2 md:py-3 px-1 md:px-2 font-semibold text-gray-800 text-xs md:text-sm sticky left-0 bg-red-50 w-1 whitespace-nowrap">
-                        {language === 'fr' ? 'Total' : 'Total'}
-                      </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
-                        <div>{formatNumber(totals.holiday100Hours, 2, language)}h</div>
-                        <div className="text-[10px] md:text-xs text-gray-600">{decimalToHHMM(totals.holiday100Hours)}</div>
-                      </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right font-semibold text-gray-800 text-xs md:text-sm w-1 whitespace-nowrap">
-                        {currency}{formatNumber(totals.holiday100Amount, 2, language)}
-                      </td>
-                    </tr>
-                    {/* TVA Row */}
-                    <tr className="border-b border-gray-200 bg-gray-50">
-                      <td colSpan={2} className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-600 text-xs md:text-sm whitespace-nowrap">
-                        {language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}
-                      </td>
-                      <td className="py-2 md:py-3 px-1 md:px-2 text-right text-gray-700 text-xs md:text-sm w-1 whitespace-nowrap">
-                        {currency}{formatNumber(totals.holiday100Amount * 0.055, 2, language)}
-                      </td>
-                    </tr>
-                  </tbody>
-                  <tfoot>
-                    {/* Grand Total Row */}
-                    <tr className="border-t-2 border-gray-400 bg-green-50">
-                      <td colSpan={2} className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-gray-900 text-sm md:text-base whitespace-nowrap">
-                        {language === 'fr' ? 'TOTAL TTC' : 'TOTAL INC. VAT'}
-                      </td>
-                      <td className="py-3 md:py-4 px-1 md:px-2 text-right font-bold text-green-600 text-lg md:text-xl w-1 whitespace-nowrap">
-                        {currency}{formatNumber(totals.holiday100Amount * 1.055, 2, language)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Training Sessions (Binôme ADV) */}
-          {trainingSummaries.length > 0 && (
-            <div className="mt-6 bg-white rounded-lg shadow-lg p-4 md:p-6">
-              <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2 text-lg">
-                <Clock size={20} className="text-amber-600" />
-                {language === 'fr' ? 'Formation - Gratuite' : 'Training - Free'}
-              </h3>
-
-              <div className="space-y-4">
-                {trainingSummaries.map((trainer, idx) => {
-                  const color = getColor(trainer.name, caregiverColors, allCaregiverNames);
-                  return (
-                    <div key={idx}>
-                      {/* Caregiver Header with Total */}
-                      <div className="flex items-center justify-between mb-3 px-4 py-2 rounded-lg border-l-4"
-                           style={{
-                             backgroundColor: hexToRgba(color, 0.1),
-                             borderColor: color
-                           }}>
-                        <h4 className="font-semibold" style={{ color: color }}>{trainer.name}</h4>
-                        <span className="text-sm text-gray-600">
-                          {formatNumber(trainer.totalHours, 2, language)}h ({decimalToHHMM(trainer.totalHours)})
-                        </span>
-                      </div>
-
-                    {/* Sessions by Date */}
-                    <div className="space-y-2">
-                      {trainer.sessions.map((session, sessionIdx) => (
-                        <div key={sessionIdx} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-                          {/* Mobile: Stacked layout */}
-                          <div className="lg:hidden space-y-2">
-                            <div className="flex items-center justify-between p-2 rounded bg-green-50">
-                              <div className="flex items-center gap-2 flex-1">
-                                <CheckCircle className="text-green-600" size={16} />
-                                <div className="flex-1">
-                                  <p className="font-medium text-gray-800 text-sm">
-                                    {format(session.date, 'EEEE, MMMM d, yyyy', { locale })}
-                                  </p>
-                                  <div className="flex items-center gap-1 text-xs text-gray-600">
-                                    <Clock size={12} />
-                                    <span>{format(session.checkIn, 'HH:mm:ss')}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-200 text-green-800">
-                                In
-                              </span>
-                            </div>
-
-                            <div className="flex items-center justify-between p-2 rounded bg-red-50">
-                              <div className="flex items-center gap-2 flex-1">
-                                <XCircle className="text-red-600" size={16} />
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-1 text-xs text-gray-600">
-                                    <Clock size={12} />
-                                    <span>{format(session.checkOut, 'HH:mm:ss')}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-200 text-red-800">
-                                Out
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Desktop: Check-in left, Check-out right */}
-                          <div className="hidden lg:grid lg:grid-cols-[1fr_auto_1fr] gap-4 items-center">
-                            {/* Left: Check-in */}
-                            <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border-l-4 border-green-500">
-                              <CheckCircle className="text-green-600" size={20} />
-                              <div className="flex-1">
-                                <p className="font-medium text-gray-800">
-                                  {format(session.date, 'EEEE, MMMM d, yyyy', { locale })}
-                                </p>
-                                <div className="flex items-center gap-1 text-sm text-gray-600">
-                                  <Clock size={14} />
-                                  <span>{format(session.checkIn, 'HH:mm:ss')}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Center: Duration */}
-                            <div className="text-center px-4">
-                              <div className="text-base font-bold text-blue-600">
-                                {formatNumber(session.hours, 2, language)}h
-                              </div>
-                            </div>
-
-                            {/* Right: Check-out */}
-                            <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 border-l-4 border-red-500">
-                              <XCircle className="text-red-600" size={20} />
-                              <div className="flex-1">
-                                <div className="flex items-center gap-1 text-sm text-gray-600">
-                                  <Clock size={14} />
-                                  <span>{format(session.checkOut, 'HH:mm:ss')}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                <div className="border-t border-slate-300 pt-2 space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>{language === 'fr' ? 'Tarif référence:' : 'Reference rate:'}</span>
+                    <span className="font-mono">{formatNumber(displayConventionedRate * 1.055, 2, language)}€ TTC/h ({formatNumber(displayConventionedRate, 2, language)}€ HT/h)</span>
                   </div>
-                );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Reste à charge (Patient's share) */}
-          {copayPercentage > 0 && (() => {
-            const totalBeforeTax = totals.totalAmount;
-            const copayBeforeTax = totalBeforeTax * copayPercentage / 100;
-            const coverageBeforeTax = totalBeforeTax * (100 - copayPercentage) / 100;
-            const copayVAT = copayBeforeTax * 0.055;
-            const coverageVAT = coverageBeforeTax * 0.055;
-            const copayWithVAT = copayBeforeTax + copayVAT;
-            const coverageWithVAT = coverageBeforeTax + coverageVAT;
-
-            return (
-              <div className="mt-6 p-4 md:p-6 bg-blue-600 rounded-lg border-2 border-blue-700">
-                <div className="flex flex-col gap-4">
-                  {/* Header */}
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
-                    <div>
-                      <h3 className="text-base md:text-lg font-semibold text-white">
-                        {language === 'fr' ? 'Reste à Charge' : 'Beneficiary\'s share'}
-                      </h3>
-                      <p className="text-xs md:text-sm text-blue-100 mt-1">
-                        {language === 'fr'
-                          ? `Ticket Modérateur: ${formatNumber(copayPercentage, 2, language)}%`
-                          : `Co-payment: ${formatNumber(copayPercentage, 2, language)}%`
-                        }
-                      </p>
+                  {apaAllowanceValue && (
+                    <div className="flex justify-between text-sm">
+                      <span>{language === 'fr' ? 'Valeur du plan:' : 'Plan value:'}</span>
+                      <span className="font-mono">{formatNumber(apaAllowanceValue * 1.055, 2, language)}€ TTC ({formatNumber(apaAllowanceValue, 2, language)}€ HT)</span>
                     </div>
-                    <div className="text-left md:text-right">
-                      <p className="text-2xl md:text-3xl font-bold text-white">
-                        {currency}{formatNumber(copayWithVAT, 2, language)}
-                      </p>
-                      <p className="text-xs text-blue-100">
-                        {language === 'fr' ? 'Avec TVA' : 'With VAT'}
-                      </p>
-                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span>{language === 'fr' ? 'Consommé¹:' : 'Consumed¹:'}</span>
+                    <span className="font-mono">{formatNumber(apaValueConsumed * 1.055, 2, language)}€ TTC ({formatNumber(apaValueConsumed, 2, language)}€ HT)</span>
                   </div>
-
-                  {/* Breakdown Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-blue-500">
-                    {/* Copay Column */}
-                    <div>
-                      <p className="text-xs font-semibold text-blue-100 mb-2">
-                        {language === 'fr' ? 'Reste à Charge' : 'Beneficiary\'s share'}
-                      </p>
-                      <div className="space-y-1 text-xs text-white">
-                        <div className="flex justify-between">
-                          <span className="text-blue-200">{language === 'fr' ? 'Hors TVA:' : 'Before VAT:'}</span>
-                          <span className="font-semibold">{currency}{formatNumber(copayBeforeTax, 2, language)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-blue-200">TVA 5.5%:</span>
-                          <span className="font-semibold">{currency}{formatNumber(copayVAT, 2, language)}</span>
-                        </div>
-                        <div className="flex justify-between pt-1 border-t border-blue-500">
-                          <span className="text-blue-200">{language === 'fr' ? 'Avec TVA:' : 'With VAT:'}</span>
-                          <span className="font-bold">{currency}{formatNumber(copayWithVAT, 2, language)}</span>
-                        </div>
-                      </div>
+                  {apaValueRemaining !== undefined && (
+                    <div className="flex justify-between text-sm">
+                      <span>{language === 'fr' ? 'Non consommé:' : 'Not consumed:'}</span>
+                      <span className="font-mono">{formatNumber(apaValueRemaining * 1.055, 2, language)}€ TTC ({formatNumber(apaValueRemaining, 2, language)}€ HT)</span>
                     </div>
+                  )}
+                </div>
 
-                    {/* Coverage Column */}
-                    <div>
-                      <p className="text-xs font-semibold text-blue-100 mb-2">
-                        {language === 'fr' ? 'Prise en Charge' : 'Coverage'}
-                      </p>
-                      <div className="space-y-1 text-xs text-white">
-                        <div className="flex justify-between">
-                          <span className="text-blue-200">{language === 'fr' ? 'Hors TVA:' : 'Before VAT:'}</span>
-                          <span className="font-semibold">{currency}{formatNumber(coverageBeforeTax, 2, language)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-blue-200">TVA 5.5%:</span>
-                          <span className="font-semibold">{currency}{formatNumber(coverageVAT, 2, language)}</span>
-                        </div>
-                        <div className="flex justify-between pt-1 border-t border-blue-500">
-                          <span className="text-blue-200">{language === 'fr' ? 'Avec TVA:' : 'With VAT:'}</span>
-                          <span className="font-bold">{currency}{formatNumber(coverageWithVAT, 2, language)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                <div className="text-[10px] text-slate-600 border-t border-slate-200 pt-2">
+                  ¹ {language === 'fr' ? 'Basé sur' : 'Based on'} {formatNumber(totals.totalHours, 2, language)}h × {formatNumber(displayConventionedRate, 2, language)}€ HT ({language === 'fr' ? 'tarif conventionné' : 'conventioned rate'})
                 </div>
               </div>
-            );
-          })()}
+            </div>
+          )}
 
-          {/* Notes Summary */}
+          {/* NOTES SUMMARY - Compact single line */}
+          <div>
           {dailyNotes.length > 0 && (() => {
             // Count notes by type
             const notesByType: Record<string, number> = {};
@@ -950,115 +877,47 @@ export default function CaregiverBreakdown({
               notesByType[type] = (notesByType[type] || 0) + 1;
             });
 
-            // Translation mapping and order
+            // Translation mapping and order with colors
             const noteTypesOrdered = [
-              { key: 'complaint', fr: 'Plainte', en: 'Complaint' },
-              { key: 'no-show', fr: 'Aucune présence', en: 'No Show' },
-              { key: 'late-arrival', fr: 'Arrivé en retard', en: 'Late Arrival' },
-              { key: 'modification', fr: 'Modification', en: 'Modification' },
-              { key: 'cancellation', fr: 'Annulation', en: 'Cancellation' },
-              { key: 'general', fr: 'Général', en: 'General' },
-              { key: 'special_instruction', fr: 'Instruction spéciale', en: 'Special Instruction' },
+              { key: 'complaint', fr: 'Plainte', en: 'Complaint', color: 'bg-red-600' },
+              { key: 'no-show', fr: 'Aucune présence', en: 'No Show', color: 'bg-orange-600' },
+              { key: 'late-arrival', fr: 'Arrivé en retard', en: 'Late Arrival', color: 'bg-pink-600' },
+              { key: 'cancellation', fr: 'Annulation', en: 'Cancellation', color: 'bg-purple-600' },
+              { key: 'modification', fr: 'Modification', en: 'Modification', color: 'bg-blue-600' },
+              { key: 'special_instruction', fr: 'Instruction spéciale', en: 'Special Instruction', color: 'bg-green-600' },
+              { key: 'general', fr: 'Général', en: 'General', color: 'bg-gray-600' },
             ];
 
             return (
-              <div className="mt-6 p-4 md:p-6 bg-orange-50 rounded-lg border-2 border-orange-200">
-                <h3 className="text-base md:text-lg font-semibold text-orange-900 mb-3">
-                  {language === 'fr' ? 'Résumé des Notes' : 'Notes Summary'}
-                </h3>
-                <p className="text-xs md:text-sm text-orange-700 mb-4">
-                  {language === 'fr'
-                    ? `${dailyNotes.length} note${dailyNotes.length > 1 ? 's' : ''} pour ce mois`
-                    : `${dailyNotes.length} note${dailyNotes.length > 1 ? 's' : ''} for this month`
-                  }
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {noteTypesOrdered
-                    .filter(noteType => notesByType[noteType.key] > 0)
-                    .map(noteType => {
-                      const count = notesByType[noteType.key];
-                      return (
-                        <div key={noteType.key} className="bg-white rounded-lg p-3 border border-orange-200">
-                          <div className="flex items-baseline gap-1.5 mb-2">
-                            <span className="text-2xl font-bold text-orange-600">{count}</span>
-                            <span className="text-xs text-gray-900">
-                              {language === 'fr'
-                                ? `jour${count > 1 ? 's' : ''}`
-                                : `day${count > 1 ? 's' : ''}`
-                              }
-                            </span>
-                          </div>
-                          <div className="text-base font-semibold text-orange-600">
-                            {language === 'fr' ? noteType.fr : noteType.en}
-                          </div>
-                        </div>
-                      );
-                    })}
+              <div className="p-4 bg-slate-50 rounded-lg border-2 border-slate-200 h-full flex items-center">
+                <div className="w-full">
+                  <h3 className="text-sm font-semibold text-slate-800 mb-2">
+                    {language === 'fr' ? 'NOTES' : 'NOTES'}
+                  </h3>
+                  <div className="flex flex-wrap gap-2 items-center text-xs">
+                    {noteTypesOrdered
+                      .filter(noteType => notesByType[noteType.key] > 0)
+                      .map((noteType, idx) => {
+                        const count = notesByType[noteType.key];
+                        return (
+                          <span key={noteType.key} className="inline-flex items-center gap-1">
+                            <span className="font-semibold text-slate-700">{language === 'fr' ? noteType.fr : noteType.en}:</span>
+                            <span className={`${noteType.color} text-white px-2 py-0.5 rounded-full font-bold`}>{count}</span>
+                          </span>
+                        );
+                      })}
+                  </div>
                 </div>
               </div>
             );
           })()}
-
-          <div className="mt-6 p-3 md:p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2 text-sm md:text-base">
-              <Euro size={16} className="text-blue-600 md:w-5 md:h-5" />
-              {t('financial.rateInfo')}
-            </h3>
-            <div className="grid md:grid-cols-3 gap-3 md:gap-4 text-xs md:text-sm">
-              <div>
-                <p className="text-gray-600">
-                  {language === 'fr' ? 'Tarif Normal (HT)' : 'Regular Rate (Before VAT)'}:
-                  <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(displayRate, 2, language)}/h</span>
-                  {ratesVaryInMonth && (
-                    <span className="text-xs text-orange-600 ml-1">*</span>
-                  )}
-                </p>
-                <p className="text-gray-600 mt-1">
-                  {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? 'Jours de semaine 8h-20h' : 'Weekdays 8 AM - 8 PM'}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-600">
-                  {language === 'fr' ? 'Tarif Majoré +25% (HT)' : 'Holiday Rate +25% (Before VAT)'}:
-                  <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(rate25, 2, language)}/h</span>
-                  {ratesVaryInMonth && (
-                    <span className="text-xs text-orange-600 ml-1">*</span>
-                  )}
-                </p>
-                <p className="text-gray-600 mt-1">
-                  {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? 'Jours fériés, dimanches, avant 8h ou après 20h' : 'Holidays, Sundays, before 8 AM or after 8 PM'}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-600">
-                  {language === 'fr' ? 'Tarif Majoré +100% (HT)' : 'Holiday Rate +100% (Before VAT)'}:
-                  <span className="font-semibold text-gray-800 ml-1">{currency}{formatNumber(rate100, 2, language)}/h</span>
-                  {ratesVaryInMonth && (
-                    <span className="text-xs text-orange-600 ml-1">*</span>
-                  )}
-                </p>
-                <p className="text-gray-600 mt-1">
-                  {language === 'fr' ? 'Appliqué à' : 'Applied to'}: {language === 'fr' ? '1er mai et 25 décembre' : 'May 1st and Dec 25th'}
-                </p>
-              </div>
-            </div>
-            {ratesVaryInMonth && (
-              <p className="mt-3 text-xs text-orange-600">
-                * {language === 'fr'
-                  ? 'Les tarifs ont changé durant ce mois. Les montants affichés utilisent les tarifs historiques exacts pour chaque journée.'
-                  : 'Rates changed during this month. Displayed amounts use the exact historical rates for each day.'}
-              </p>
-            )}
           </div>
-
-          <div className="mt-4 text-[10px] md:text-xs text-gray-500">
-            <p>{t('financial.verificationNote')}</p>
-            <p className="mt-1">
-              {language === 'fr'
-                ? 'Les jours fériés français pris en compte : 1er janvier, 1er mai, 8 mai, 14 juillet, 15 août, 1er novembre, 11 novembre, 25 décembre.'
-                : 'French public holidays accounted for: January 1, May 1, May 8, July 14, August 15, November 1, November 11, December 25.'}
-            </p>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+})()}
         </>
       )}
     </div>
