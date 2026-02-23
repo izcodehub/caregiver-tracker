@@ -457,7 +457,7 @@ export default function CaregiverBreakdown({
   return (
     <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
       <h2 className="text-lg md:text-xl font-semibold text-gray-800 mb-4 uppercase">
-        {t('financial.title')} - {format(selectedMonth, 'MMMM yyyy', { locale })}
+        {t('financial.title')} - {format(selectedMonth, 'MMMM yyyy', { locale })} [v2]
       </h2>
 
       {summaries.length === 0 ? (

@@ -1,0 +1,396 @@
+// NEW FINANCIAL SUMMARY IMPLEMENTATION
+// This will replace lines 877-1138 in CaregiverBreakdown.tsx
+
+{/* RÉSUMÉ FINANCIER */}
+{copayPercentage > 0 && (() => {
+  // Calculate per-hour rates for display
+  const rate25 = displayRate * 1.25;
+  const rate100 = displayRate * 2.0;
+
+  // APA coverage per hour (constant regardless of majoration)
+  const apaPerHour = displayConventionedRate * (1 - copayPercentage / 100);
+
+  // Beneficiary per hour calculations
+  const rateExcess = Math.max(0, displayRate - displayConventionedRate);
+  const benefCopay = displayConventionedRate * (copayPercentage / 100);
+  const benefNormal = benefCopay + rateExcess;
+  const benef25 = benefNormal + (displayRate * 0.25);
+  const benef100 = benefNormal + (displayRate * 1.0);
+
+  // Total calculations
+  const totalCalendarHours = totals.regularHours + totals.holiday25Hours + totals.holiday100Hours;
+  const conventionedBaseHT = totalCalendarHours * displayConventionedRate;
+  const apaHT = conventionedBaseHT * (1 - copayPercentage / 100);
+  const benefHT = totals.totalAmount - apaHT;
+
+  // Format helper
+  const f = (ht: number) => ({
+    ht: formatNumber(ht, 2, language),
+    tva: formatNumber(ht * 0.055, 2, language),
+    ttc: formatNumber(ht * 1.055, 2, language),
+  });
+
+  const totalFmt = f(totals.totalAmount);
+  const apaFmt = f(apaHT);
+  const benefFmt = f(benefHT);
+
+  // APA allowance calculations
+  const apaAllowanceValue = displayApaMonthlyHours ? displayApaMonthlyHours * displayConventionedRate : undefined;
+  const apaHoursRemaining = displayApaMonthlyHours ? displayApaMonthlyHours - totals.totalHours : undefined;
+  const apaValueConsumed = conventionedBaseHT;
+  const apaValueRemaining = apaAllowanceValue ? apaAllowanceValue - apaValueConsumed : undefined;
+  const apaUsagePercent = displayApaMonthlyHours ? (totals.totalHours / displayApaMonthlyHours) * 100 : undefined;
+
+  // Group caregivers by hour type
+  const caregiversByType = {
+    regular: [] as { name: string; hours: number; amount: number }[],
+    holiday25: [] as { name: string; hours: number; amount: number; dates: string[] }[],
+    holiday100: [] as { name: string; hours: number; amount: number; dates: string[] }[],
+  };
+
+  calculateHoursPerCaregiver().forEach(cg => {
+    if (cg.regularHours > 0) {
+      caregiversByType.regular.push({
+        name: cg.name,
+        hours: cg.regularHours,
+        amount: cg.regularAmount,
+      });
+    }
+    if (cg.holiday25Hours > 0) {
+      caregiversByType.holiday25.push({
+        name: cg.name,
+        hours: cg.holiday25Hours,
+        amount: cg.holiday25Amount,
+        dates: [], // TODO: extract dates from check-ins
+      });
+    }
+    if (cg.holiday100Hours > 0) {
+      caregiversByType.holiday100.push({
+        name: cg.name,
+        hours: cg.holiday100Hours,
+        amount: cg.holiday100Amount,
+        dates: [], // TODO: extract dates from check-ins
+      });
+    }
+  });
+
+  const monthName = format(selectedMonth, 'MMMM yyyy', { locale });
+
+  return (
+    <div className="mt-6 space-y-6">
+      {/* HEADER */}
+      <div className="text-center border-t-4 border-b-4 border-gray-400 py-2">
+        <h2 className="text-xl font-bold text-gray-800">
+          {language === 'fr' ? 'RÉSUMÉ FINANCIER' : 'FINANCIAL SUMMARY'} - {monthName}
+        </h2>
+      </div>
+
+      {/* RATE CARD */}
+      <div className="p-4 md:p-6 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border-2 border-blue-300">
+        <h3 className="text-lg font-bold text-blue-900 mb-3">
+          📋 {language === 'fr' ? 'TARIFS APPLICABLES' : 'APPLICABLE RATES'}
+        </h3>
+
+        {displayApaMonthlyHours && (
+          <div className="text-sm text-blue-800 mb-4 space-y-1">
+            <div><strong>{language === 'fr' ? 'Plan d\'aide APA:' : 'APA plan:'}</strong> {displayApaMonthlyHours}h/{language === 'fr' ? 'mois' : 'month'} à {formatNumber(displayConventionedRate * 1.055, 2, language)}€ TTC/h ({formatNumber(displayConventionedRate, 2, language)}€ HT/h)</div>
+            <div>{language === 'fr' ? 'Couverture APA:' : 'APA coverage:'} {formatNumber(100 - copayPercentage, 2, language)}% {language === 'fr' ? 'du tarif conventionné' : 'of conventioned rate'}</div>
+            <div>{language === 'fr' ? 'Ticket modérateur bénéficiaire:' : 'Beneficiary copay:'} {formatNumber(copayPercentage, 2, language)}%</div>
+          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs md:text-sm bg-white rounded border border-blue-200">
+            <thead>
+              <tr className="border-b-2 border-blue-300 bg-blue-200">
+                <th className="text-left p-2 font-semibold">{language === 'fr' ? 'Type d\'heure' : 'Hour type'}</th>
+                <th className="text-right p-2 font-semibold">{language === 'fr' ? 'Vitalliance facture' : 'Company bills'}</th>
+                <th className="text-right p-2 font-semibold">{language === 'fr' ? 'APA couvre¹' : 'APA covers¹'}</th>
+                <th className="text-right p-2 font-semibold">{language === 'fr' ? 'Bénéficiaire paie' : 'Beneficiary pays'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-blue-100">
+                <td className="p-2">Normal</td>
+                <td className="text-right p-2 font-mono">{formatNumber(displayRate, 2, language)}€</td>
+                <td className="text-right p-2 font-mono">{formatNumber(apaPerHour, 2, language)}€</td>
+                <td className="text-right p-2 font-mono">{formatNumber(benefNormal, 2, language)}€²</td>
+              </tr>
+              <tr className="border-b border-blue-100">
+                <td className="p-2">{language === 'fr' ? 'Majoré +25%' : 'Premium +25%'}</td>
+                <td className="text-right p-2 font-mono">{formatNumber(rate25, 2, language)}€</td>
+                <td className="text-right p-2 font-mono">{formatNumber(apaPerHour, 2, language)}€</td>
+                <td className="text-right p-2 font-mono">{formatNumber(benef25, 2, language)}€³</td>
+              </tr>
+              <tr>
+                <td className="p-2">{language === 'fr' ? 'Majoré +100%' : 'Premium +100%'}</td>
+                <td className="text-right p-2 font-mono">{formatNumber(rate100, 2, language)}€</td>
+                <td className="text-right p-2 font-mono">{formatNumber(apaPerHour, 2, language)}€</td>
+                <td className="text-right p-2 font-mono">{formatNumber(benef100, 2, language)}€⁴</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-3 text-[10px] md:text-xs text-blue-700 space-y-0.5">
+          <div>¹ APA {language === 'fr' ? 'couvre' : 'covers'}: {formatNumber(100 - copayPercentage, 2, language)}% × {formatNumber(displayConventionedRate, 2, language)}€ = {formatNumber(apaPerHour, 2, language)}€/h {displayApaMonthlyHours && `(${language === 'fr' ? 'limite' : 'limit'}: ${displayApaMonthlyHours}h/${language === 'fr' ? 'mois' : 'month'})`}</div>
+          <div>² {language === 'fr' ? 'Bénéficiaire' : 'Beneficiary'}: ({formatNumber(copayPercentage, 2, language)}% × {formatNumber(displayConventionedRate, 2, language)}€) + {language === 'fr' ? 'hausse' : 'increase'} {formatNumber(rateExcess, 2, language)}€ = {formatNumber(benefNormal, 2, language)}€/h</div>
+          <div>³ {language === 'fr' ? 'Bénéficiaire' : 'Beneficiary'}: {formatNumber(benefNormal, 2, language)}€ + {language === 'fr' ? 'majoration' : 'premium'} +25% ({formatNumber(displayRate * 0.25, 2, language)}€) = {formatNumber(benef25, 2, language)}€/h</div>
+          <div>⁴ {language === 'fr' ? 'Bénéficiaire' : 'Beneficiary'}: {formatNumber(benefNormal, 2, language)}€ + {language === 'fr' ? 'majoration' : 'premium'} +100% ({formatNumber(displayRate, 2, language)}€) = {formatNumber(benef100, 2, language)}€/h</div>
+        </div>
+      </div>
+
+      {/* HOUR DETAILS - Grouped by type */}
+      <div className="border-t-2 border-gray-300 pt-4">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">
+          {language === 'fr' ? 'DÉTAIL DES HEURES' : 'HOUR DETAILS'}
+        </h3>
+
+        {/* Normal hours */}
+        {caregiversByType.regular.length > 0 && (
+          <div className="mb-6">
+            <div className="bg-gray-100 px-3 py-2 font-semibold text-gray-800 border-b-2 border-gray-400">
+              {language === 'fr' ? 'HEURES NORMALES' : 'NORMAL HOURS'} - {formatNumber(displayRate, 2, language)}€ HT/h
+            </div>
+            <table className="w-full text-xs md:text-sm">
+              <thead>
+                <tr className="border-b border-gray-300 bg-gray-50">
+                  <th className="text-left p-2">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</th>
+                  <th className="text-right p-2">{language === 'fr' ? 'Heures' : 'Hours'}</th>
+                  <th className="text-right p-2">{language === 'fr' ? 'Facturé' : 'Billed'}</th>
+                  <th className="text-right p-2">APA</th>
+                  <th className="text-right p-2">{language === 'fr' ? 'Bénéfic.' : 'Benef.'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {caregiversByType.regular.map((cg, idx) => (
+                  <tr key={idx} className="border-b border-gray-200">
+                    <td className="p-2">{cg.name}</td>
+                    <td className="text-right p-2 font-mono">
+                      {formatNumber(cg.hours, 2, language)}h<br/>
+                      <span className="text-[10px] text-gray-500">{decimalToHHMM(cg.hours)}</span>
+                    </td>
+                    <td className="text-right p-2 font-mono">{formatNumber(cg.amount, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(cg.hours * apaPerHour, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono">{formatNumber(cg.hours * benefNormal, 2, language)}€</td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-gray-400 bg-gray-100 font-semibold">
+                  <td className="p-2">TOTAL</td>
+                  <td className="text-right p-2 font-mono">
+                    {formatNumber(totals.regularHours, 2, language)}h<br/>
+                    <span className="text-[10px]">{decimalToHHMM(totals.regularHours)}</span>
+                  </td>
+                  <td className="text-right p-2 font-mono">{formatNumber(totals.regularAmount, 2, language)}€</td>
+                  <td className="text-right p-2 font-mono">{formatNumber(totals.regularHours * apaPerHour, 2, language)}€</td>
+                  <td className="text-right p-2 font-mono">{formatNumber(totals.regularHours * benefNormal, 2, language)}€</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* +25% hours - only show if there are any */}
+        {caregiversByType.holiday25.length > 0 && totals.holiday25Hours > 0 && (
+          <div className="mb-6">
+            <div className="bg-orange-100 px-3 py-2 font-semibold text-gray-800 border-b-2 border-orange-400">
+              {language === 'fr' ? 'HEURES MAJORÉES +25%' : 'PREMIUM HOURS +25%'} - {formatNumber(rate25, 2, language)}€ HT/h
+            </div>
+            <div className="text-xs text-gray-600 px-3 py-1 bg-orange-50">
+              {language === 'fr' ? 'Dimanches, jours fériés, avant 8h ou après 20h' : 'Sundays, holidays, before 8 AM or after 8 PM'}
+            </div>
+            <table className="w-full text-xs md:text-sm">
+              <thead>
+                <tr className="border-b border-gray-300 bg-gray-50">
+                  <th className="text-left p-2">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</th>
+                  <th className="text-right p-2">{language === 'fr' ? 'Heures' : 'Hours'}</th>
+                  <th className="text-right p-2">{language === 'fr' ? 'Facturé' : 'Billed'}</th>
+                  <th className="text-right p-2">APA</th>
+                  <th className="text-right p-2">{language === 'fr' ? 'Bénéfic.' : 'Benef.'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {caregiversByType.holiday25.map((cg, idx) => (
+                  <tr key={idx} className="border-b border-gray-200">
+                    <td className="p-2 align-top">
+                      {cg.name}
+                      {cg.dates.length > 0 && (
+                        <div className="text-[10px] text-gray-500 mt-1">
+                          📅 {cg.dates.map((d, i) => <div key={i}>{d}</div>)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="text-right p-2 font-mono align-top">
+                      {formatNumber(cg.hours, 2, language)}h<br/>
+                      <span className="text-[10px] text-gray-500">{decimalToHHMM(cg.hours)}</span>
+                    </td>
+                    <td className="text-right p-2 font-mono align-top">{formatNumber(cg.amount, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono align-top">{formatNumber(cg.hours * apaPerHour, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono align-top">{formatNumber(cg.hours * benef25, 2, language)}€</td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-orange-400 bg-orange-100 font-semibold">
+                  <td className="p-2">TOTAL</td>
+                  <td className="text-right p-2 font-mono">
+                    {formatNumber(totals.holiday25Hours, 2, language)}h<br/>
+                    <span className="text-[10px]">{decimalToHHMM(totals.holiday25Hours)}</span>
+                  </td>
+                  <td className="text-right p-2 font-mono">{formatNumber(totals.holiday25Amount, 2, language)}€</td>
+                  <td className="text-right p-2 font-mono">{formatNumber(totals.holiday25Hours * apaPerHour, 2, language)}€</td>
+                  <td className="text-right p-2 font-mono">{formatNumber(totals.holiday25Hours * benef25, 2, language)}€</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* +100% hours - only show if there are any */}
+        {caregiversByType.holiday100.length > 0 && totals.holiday100Hours > 0 && (
+          <div className="mb-6">
+            <div className="bg-red-100 px-3 py-2 font-semibold text-gray-800 border-b-2 border-red-400">
+              {language === 'fr' ? 'HEURES MAJORÉES +100%' : 'PREMIUM HOURS +100%'} - {formatNumber(rate100, 2, language)}€ HT/h
+            </div>
+            <div className="text-xs text-gray-600 px-3 py-1 bg-red-50">
+              {language === 'fr' ? '1er mai et 25 décembre uniquement' : 'May 1st and December 25th only'}
+            </div>
+            <table className="w-full text-xs md:text-sm">
+              <thead>
+                <tr className="border-b border-gray-300 bg-gray-50">
+                  <th className="text-left p-2">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</th>
+                  <th className="text-right p-2">{language === 'fr' ? 'Heures' : 'Hours'}</th>
+                  <th className="text-right p-2">{language === 'fr' ? 'Facturé' : 'Billed'}</th>
+                  <th className="text-right p-2">APA</th>
+                  <th className="text-right p-2">{language === 'fr' ? 'Bénéfic.' : 'Benef.'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {caregiversByType.holiday100.map((cg, idx) => (
+                  <tr key={idx} className="border-b border-gray-200">
+                    <td className="p-2 align-top">
+                      {cg.name}
+                      {cg.dates.length > 0 && (
+                        <div className="text-[10px] text-gray-500 mt-1">
+                          📅 {cg.dates.map((d, i) => <div key={i}>{d}</div>)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="text-right p-2 font-mono align-top">
+                      {formatNumber(cg.hours, 2, language)}h<br/>
+                      <span className="text-[10px] text-gray-500">{decimalToHHMM(cg.hours)}</span>
+                    </td>
+                    <td className="text-right p-2 font-mono align-top">{formatNumber(cg.amount, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono align-top">{formatNumber(cg.hours * apaPerHour, 2, language)}€</td>
+                    <td className="text-right p-2 font-mono align-top">{formatNumber(cg.hours * benef100, 2, language)}€</td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-red-400 bg-red-100 font-semibold">
+                  <td className="p-2">TOTAL</td>
+                  <td className="text-right p-2 font-mono">
+                    {formatNumber(totals.holiday100Hours, 2, language)}h<br/>
+                    <span className="text-[10px]">{decimalToHHMM(totals.holiday100Hours)}</span>
+                  </td>
+                  <td className="text-right p-2 font-mono">{formatNumber(totals.holiday100Amount, 2, language)}€</td>
+                  <td className="text-right p-2 font-mono">{formatNumber(totals.holiday100Hours * apaPerHour, 2, language)}€</td>
+                  <td className="text-right p-2 font-mono">{formatNumber(totals.holiday100Hours * benef100, 2, language)}€</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* TOTALS */}
+      <div className="border-t-4 border-gray-400 pt-4">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">
+          {language === 'fr' ? 'TOTAUX DU MOIS' : 'MONTHLY TOTALS'}
+        </h3>
+
+        <div className="bg-gray-100 p-4 rounded space-y-2 text-sm md:text-base">
+          <div className="flex justify-between">
+            <span>{language === 'fr' ? 'Heures totales:' : 'Total hours:'}</span>
+            <span className="font-mono font-semibold">{formatNumber(totals.totalHours, 2, language)}h ({decimalToHHMM(totals.totalHours)})</span>
+          </div>
+
+          <div className="border-t-2 border-gray-300 pt-2 mt-2"></div>
+
+          <div className="flex justify-between">
+            <span>{language === 'fr' ? 'Facturation totale:' : 'Total billing:'}</span>
+            <span className="font-mono">{currency}{totalFmt.ht}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span>TVA (5,5%):</span>
+            <span className="font-mono">{currency}{totalFmt.tva}</span>
+          </div>
+          <div className="flex justify-between font-bold text-lg border-t border-gray-400 pt-1">
+            <span>TOTAL TTC:</span>
+            <span className="font-mono">{currency}{totalFmt.ttc}</span>
+          </div>
+
+          <div className="border-t-2 border-gray-400 pt-2 mt-2"></div>
+
+          <div className="flex justify-between text-green-700">
+            <span>✓ {language === 'fr' ? 'Part APA:' : 'APA share:'}</span>
+            <span className="font-mono font-semibold">{currency}{apaFmt.ht} ({currency}{apaFmt.ttc} TTC)</span>
+          </div>
+          <div className="flex justify-between text-orange-700">
+            <span>✗ {language === 'fr' ? 'Part bénéficiaire:' : 'Beneficiary share:'}</span>
+            <span className="font-mono font-semibold">{currency}{benefFmt.ht} ({currency}{benefFmt.ttc} TTC)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* APA ALLOWANCE */}
+      {displayApaMonthlyHours && (
+        <div className="border-t-4 border-blue-400 pt-4">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">
+            {language === 'fr' ? 'UTILISATION PLAN D\'AIDE APA' : 'APA ALLOWANCE USAGE'}
+          </h3>
+
+          <div className="bg-blue-50 p-4 rounded space-y-3 text-sm md:text-base">
+            <div className="flex justify-between items-center">
+              <span className="font-semibold">{language === 'fr' ? 'Heures utilisées:' : 'Hours used:'}</span>
+              <span className="font-mono text-lg">
+                {formatNumber(totals.totalHours, 2, language)}h / {formatNumber(displayApaMonthlyHours, 2, language)}h
+                {apaUsagePercent && <span className="text-sm text-gray-600 ml-2">({formatNumber(apaUsagePercent, 1, language)}%)</span>}
+              </span>
+            </div>
+
+            {apaHoursRemaining !== undefined && (
+              <div className="flex justify-between text-sm">
+                <span>{language === 'fr' ? 'Heures restantes:' : 'Remaining hours:'}</span>
+                <span className="font-mono">{formatNumber(apaHoursRemaining, 2, language)}h <span className="text-gray-500">({language === 'fr' ? 'non reportables au mois suivant' : 'not rollover to next month'})</span></span>
+              </div>
+            )}
+
+            <div className="border-t border-blue-300 pt-2 space-y-1">
+              <div className="flex justify-between text-sm">
+                <span>{language === 'fr' ? 'Tarif référence:' : 'Reference rate:'}</span>
+                <span className="font-mono">{formatNumber(displayConventionedRate * 1.055, 2, language)}€ TTC/h ({formatNumber(displayConventionedRate, 2, language)}€ HT/h)</span>
+              </div>
+              {apaAllowanceValue && (
+                <div className="flex justify-between text-sm">
+                  <span>{language === 'fr' ? 'Valeur du plan:' : 'Plan value:'}</span>
+                  <span className="font-mono">{formatNumber(apaAllowanceValue * 1.055, 2, language)}€ TTC ({formatNumber(apaAllowanceValue, 2, language)}€ HT)</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span>{language === 'fr' ? 'Consommé¹:' : 'Consumed¹:'}</span>
+                <span className="font-mono">{formatNumber(apaValueConsumed * 1.055, 2, language)}€ TTC ({formatNumber(apaValueConsumed, 2, language)}€ HT)</span>
+              </div>
+              {apaValueRemaining !== undefined && (
+                <div className="flex justify-between text-sm">
+                  <span>{language === 'fr' ? 'Reste disponible:' : 'Remaining available:'}</span>
+                  <span className="font-mono">{formatNumber(apaValueRemaining * 1.055, 2, language)}€ TTC ({formatNumber(apaValueRemaining, 2, language)}€ HT)</span>
+                </div>
+              )}
+            </div>
+
+            <div className="text-[10px] text-gray-600 border-t border-blue-200 pt-2">
+              ¹ {language === 'fr' ? 'Basé sur' : 'Based on'} {formatNumber(totals.totalHours, 2, language)}h × {formatNumber(displayConventionedRate, 2, language)}€ HT ({language === 'fr' ? 'tarif conventionné' : 'conventioned rate'})
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+})()}
