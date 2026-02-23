@@ -559,23 +559,23 @@ export default function CaregiverBreakdown({
               <div className="bg-teal-100 px-3 py-2 font-semibold text-gray-800 border-b-2 border-teal-200 text-xs md:text-sm">
                 {language === 'fr' ? 'HEURES NORMALES' : 'NORMAL HOURS'} - {formatNumber(displayRate, 2, language)}€ HT/h
               </div>
-              <table className="w-full text-xs md:text-sm">
+              <table className="w-full text-xs md:text-sm" style={{ tableLayout: 'fixed' }}>
                 <thead>
                   <tr className="border-b border-gray-300 bg-teal-50 text-gray-800">
-                    <th className="text-left p-1 md:p-2">
+                    <th className="text-left p-1 md:p-2" style={{ width: '25%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'Nom' : 'Name'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</span>
                     </th>
-                    <th className="text-right p-1 md:p-2">
+                    <th className="text-right p-1 md:p-2" style={{ width: '15%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'H.' : 'H.'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Heures' : 'Hours'}</span>
                     </th>
-                    <th className="text-right p-1 md:p-2">
+                    <th className="text-right p-1 md:p-2" style={{ width: '20%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'Fact.' : 'Bill'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Facturé' : 'Billed'}</span>
                     </th>
-                    <th className="text-right p-1 md:p-2">APA</th>
-                    <th className="text-right p-1 md:p-2">
+                    <th className="text-right p-1 md:p-2" style={{ width: '20%' }}>APA</th>
+                    <th className="text-right p-1 md:p-2" style={{ width: '20%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'Bén.' : 'Ben.'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Bénéficiaire' : 'Beneficiary'}</span>
                     </th>
@@ -636,23 +636,23 @@ export default function CaregiverBreakdown({
                   ({language === 'fr' ? 'Dimanches, jours fériés, avant 8h ou après 20h' : 'Sundays, holidays, before 8 AM or after 8 PM'})
                 </span>
               </div>
-              <table className="w-full text-xs md:text-sm">
+              <table className="w-full text-xs md:text-sm" style={{ tableLayout: 'fixed' }}>
                 <thead>
                   <tr className="border-b border-gray-300 bg-teal-500 text-white">
-                    <th className="text-left p-1 md:p-2">
+                    <th className="text-left p-1 md:p-2" style={{ width: '25%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'Nom' : 'Name'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</span>
                     </th>
-                    <th className="text-right p-1 md:p-2">
+                    <th className="text-right p-1 md:p-2" style={{ width: '15%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'H.' : 'H.'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Heures' : 'Hours'}</span>
                     </th>
-                    <th className="text-right p-1 md:p-2">
+                    <th className="text-right p-1 md:p-2" style={{ width: '20%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'Fact.' : 'Bill'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Facturé' : 'Billed'}</span>
                     </th>
-                    <th className="text-right p-1 md:p-2">APA</th>
-                    <th className="text-right p-1 md:p-2">
+                    <th className="text-right p-1 md:p-2" style={{ width: '20%' }}>APA</th>
+                    <th className="text-right p-1 md:p-2" style={{ width: '20%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'Bén.' : 'Ben.'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Bénéficiaire' : 'Beneficiary'}</span>
                     </th>
@@ -713,23 +713,23 @@ export default function CaregiverBreakdown({
                   ({language === 'fr' ? '1er mai et 25 décembre uniquement' : 'May 1st and December 25th only'})
                 </span>
               </div>
-              <table className="w-full text-xs md:text-sm">
+              <table className="w-full text-xs md:text-sm" style={{ tableLayout: 'fixed' }}>
                 <thead>
                   <tr className="border-b border-gray-300 bg-teal-600 text-white">
-                    <th className="text-left p-1 md:p-2">
+                    <th className="text-left p-1 md:p-2" style={{ width: '25%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'Nom' : 'Name'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</span>
                     </th>
-                    <th className="text-right p-1 md:p-2">
+                    <th className="text-right p-1 md:p-2" style={{ width: '15%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'H.' : 'H.'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Heures' : 'Hours'}</span>
                     </th>
-                    <th className="text-right p-1 md:p-2">
+                    <th className="text-right p-1 md:p-2" style={{ width: '20%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'Fact.' : 'Bill'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Facturé' : 'Billed'}</span>
                     </th>
-                    <th className="text-right p-1 md:p-2">APA</th>
-                    <th className="text-right p-1 md:p-2">
+                    <th className="text-right p-1 md:p-2" style={{ width: '20%' }}>APA</th>
+                    <th className="text-right p-1 md:p-2" style={{ width: '20%' }}>
                       <span className="md:hidden">{language === 'fr' ? 'Bén.' : 'Ben.'}</span>
                       <span className="hidden md:inline">{language === 'fr' ? 'Bénéficiaire' : 'Beneficiary'}</span>
                     </th>
@@ -783,7 +783,14 @@ export default function CaregiverBreakdown({
 
         {/* TOTAL TABLE */}
         <div className="mt-4">
-          <table className="w-full text-xs md:text-sm">
+          <table className="w-full text-xs md:text-sm" style={{ tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: '25%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '20%' }} />
+              <col style={{ width: '20%' }} />
+            </colgroup>
             <tbody>
               <tr className="border-b border-slate-300 bg-slate-200 text-gray-900 font-semibold">
                 <td className="p-1 md:p-2 text-[11px] md:text-sm">{language === 'fr' ? 'TOTAL HT' : 'TOTAL (excl. VAT)'}</td>
