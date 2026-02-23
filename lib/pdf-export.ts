@@ -96,7 +96,7 @@ export function exportFinancialSummaryToPDF(
   // ========== DÉTAIL DES HEURES ==========
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text(language === 'fr' ? 'DÉTAIL DES HEURES' : 'HOUR DETAILS', 14, yPos);
+  doc.text(language === 'fr' ? 'DÉTAIL DES HEURES' : 'HOUR DETAILS', 196, yPos, { align: 'right' });
   yPos += 7;
 
   // HEURES NORMALES table
@@ -348,8 +348,9 @@ export function exportFinancialSummaryToPDF(
   const tarifMonthYear = format(selectedMonth, 'MMMM yyyy', { locale: language === 'fr' ? fr : enUS });
   doc.text(
     language === 'fr' ? `TARIFS HORAIRE HT ${tarifMonthYear.toUpperCase()}` : `HOURLY RATES (excl. VAT) ${tarifMonthYear.toUpperCase()}`,
-    14,
-    yPos
+    196,
+    yPos,
+    { align: 'right' }
   );
   yPos += 5;
 

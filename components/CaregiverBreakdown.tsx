@@ -555,11 +555,11 @@ export default function CaregiverBreakdown({
       <div className="space-y-4">
           {/* REGULAR HOURS - Always shown on top */}
           {caregiversByType.regular.length > 0 && (
-            <div>
+            <div className="overflow-x-auto">
               <div className="bg-teal-100 px-3 py-2 font-semibold text-gray-800 border-b-2 border-teal-200">
                 {language === 'fr' ? 'HEURES NORMALES' : 'NORMAL HOURS'} - {formatNumber(displayRate, 2, language)}€ HT/h
               </div>
-              <table className="w-full text-xs md:text-sm table-fixed">
+              <table className="w-full text-xs md:text-sm table-fixed min-w-[600px]">
                 <colgroup>
                   <col className="w-auto" />
                   <col className="w-32" />
@@ -606,14 +606,14 @@ export default function CaregiverBreakdown({
 
           {/* +25% hours - only show if there are any */}
           {caregiversByType.holiday25.length > 0 && totals.holiday25Hours > 0 && (
-            <div>
+            <div className="overflow-x-auto">
               <div className="bg-teal-600 px-3 py-2 text-white border-b-2 border-teal-700 font-semibold">
                 {language === 'fr' ? 'HEURES MAJORÉES +25%' : 'PREMIUM HOURS +25%'} - {formatNumber(rate25, 2, language)}€ HT/h
                 <span className="text-xs font-normal ml-2">
                   ({language === 'fr' ? 'Dimanches, jours fériés, avant 8h ou après 20h' : 'Sundays, holidays, before 8 AM or after 8 PM'})
                 </span>
               </div>
-              <table className="w-full text-xs md:text-sm table-fixed">
+              <table className="w-full text-xs md:text-sm table-fixed min-w-[600px]">
                 <colgroup>
                   <col className="w-auto" />
                   <col className="w-32" />
@@ -667,14 +667,14 @@ export default function CaregiverBreakdown({
 
           {/* +100% hours - only show if there are any */}
           {caregiversByType.holiday100.length > 0 && totals.holiday100Hours > 0 && (
-            <div>
+            <div className="overflow-x-auto">
               <div className="bg-teal-700 px-3 py-2 text-white border-b-2 border-teal-800 font-semibold">
                 {language === 'fr' ? 'HEURES MAJORÉES +100%' : 'PREMIUM HOURS +100%'} - {formatNumber(rate100, 2, language)}€ HT/h
                 <span className="text-xs font-normal ml-2">
                   ({language === 'fr' ? '1er mai et 25 décembre uniquement' : 'May 1st and December 25th only'})
                 </span>
               </div>
-              <table className="w-full text-xs md:text-sm table-fixed">
+              <table className="w-full text-xs md:text-sm table-fixed min-w-[600px]">
                 <colgroup>
                   <col className="w-auto" />
                   <col className="w-32" />
@@ -727,8 +727,8 @@ export default function CaregiverBreakdown({
           )}
 
         {/* TOTAL TABLE */}
-        <div className="mt-4">
-          <table className="w-full text-xs md:text-sm table-fixed">
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-xs md:text-sm table-fixed min-w-[600px]">
             <colgroup>
               <col className="w-auto" />
               <col className="w-32" />
