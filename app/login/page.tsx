@@ -399,7 +399,7 @@ function LoginContent() {
             </div>
           ) : (
             // SIGNUP FORM
-            <form onSubmit={handleSignUp} className="space-y-4">
+            <form onSubmit={handleSignUp} className="space-y-4" autoComplete="on">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('auth.beneficiaryName') || 'Beneficiary Name'}
@@ -598,6 +598,8 @@ function LoginContent() {
                       </div>
                       <input
                         type="email"
+                        name={index === 0 ? "username" : `email-${index}`}
+                        autoComplete={index === 0 ? "username email" : "email"}
                         value={member.email}
                         onChange={(e) => updateFamilyMember(index, 'email', e.target.value)}
                         className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
@@ -628,6 +630,9 @@ function LoginContent() {
                         </div>
                         <input
                           type="password"
+                          name="new-password"
+                          id="signup-password"
+                          autoComplete="new-password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
