@@ -398,12 +398,13 @@ export function exportFinancialSummaryToPDF(
     headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' }, // slate-600
     bodyStyles: { fontSize: 8, textColor: [51, 65, 85] }, // slate-800
     columnStyles: {
-      0: { cellWidth: 75, halign: 'left' },
-      1: { cellWidth: 37, halign: 'right' },
-      2: { cellWidth: 37, halign: 'right' },
-      3: { cellWidth: 37, halign: 'right' }
+      0: { cellWidth: 70, halign: 'left' },
+      1: { cellWidth: 37.33, halign: 'right' },
+      2: { cellWidth: 37.33, halign: 'right' },
+      3: { cellWidth: 37.33, halign: 'right' }
     },
     margin: { left: 14, right: 14 },
+    tableWidth: 182,
     theme: 'striped',
     alternateRowStyles: { fillColor: [248, 250, 252] }, // slate-50
     didParseCell: (data: any) => {
