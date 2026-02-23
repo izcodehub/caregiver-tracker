@@ -71,6 +71,7 @@ type CaregiverBreakdownProps = {
   caregiverColors: Map<string, string>;
   dailyNotes: DailyNote[];
   timezone: string;
+  beneficiaryName?: string;
 };
 
 export default function CaregiverBreakdown({
@@ -85,6 +86,7 @@ export default function CaregiverBreakdown({
   caregiverColors,
   dailyNotes,
   timezone,
+  beneficiaryName,
 }: CaregiverBreakdownProps) {
   const { t, language } = useLanguage();
   const locale = language === 'fr' ? fr : enUS;
@@ -542,75 +544,29 @@ export default function CaregiverBreakdown({
 
   return (
     <div className="mt-6 space-y-6">
-      {/* AT A GLANCE SECTION TITLE */}
+      {/* DÉTAIL DES HEURES SECTION */}
       <div className="border-t-4 border-gray-400 pt-4">
         <h2 className="text-xl font-bold text-gray-800 uppercase mb-4">
-          {language === 'fr' ? 'En un coup d\'œil' : 'At a Glance'}
+          {language === 'fr' ? 'DÉTAIL DES HEURES' : 'HOUR DETAILS'}
         </h2>
       </div>
 
-      {/* AT A GLANCE - TOTALS AND HOUR DETAILS side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* TOTALS CARD - Left */}
-        <div className="flex flex-col">
-          <div className="bg-slate-50 p-4 md:p-6 rounded-t space-y-2 text-sm md:text-base text-slate-800 border-2 border-slate-200 border-b-0">
-            <h3 className="text-base md:text-lg font-semibold text-slate-800 mb-3">
-              {language === 'fr' ? `TOTAUX DU MOIS DE ${monthName.toUpperCase()}` : `MONTHLY TOTALS - ${monthName.toUpperCase()}`}
-            </h3>
-            <div className="flex justify-between">
-              <span>{language === 'fr' ? 'Heures totales:' : 'Total hours:'}</span>
-              <span className="font-mono font-semibold">{formatNumber(totals.totalHours, 2, language)}h ({decimalToHHMM(totals.totalHours)})</span>
-            </div>
-
-            <div className="border-t-2 border-slate-300 pt-2 mt-2"></div>
-
-            <div className="flex justify-between">
-              <span>{language === 'fr' ? 'Facturation totale:' : 'Total billing:'}</span>
-              <span className="font-mono">{currency}{totalFmt.ht}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>TVA (5,5%):</span>
-              <span className="font-mono">{currency}{totalFmt.tva}</span>
-            </div>
-            <div className="flex justify-between font-bold text-lg border-t border-slate-400 pt-1">
-              <span>TOTAL TTC:</span>
-              <span className="font-mono">{currency}{totalFmt.ttc}</span>
-            </div>
-
-            <div className="border-t-2 border-slate-400 pt-2 mt-2"></div>
-
-            <div className="flex justify-between text-teal-700">
-              <span>✓ {language === 'fr' ? 'Part APA:' : 'APA share:'}</span>
-              <span className="font-mono font-semibold">{currency}{apaFmt.ht} ({currency}{apaFmt.ttc} TTC)</span>
-            </div>
-            <div className="flex justify-between text-amber-700">
-              <span>✗ {language === 'fr' ? 'Part bénéficiaire:' : 'Beneficiary share:'}</span>
-              <span className="font-mono font-semibold">{currency}{benefFmt.ht} ({currency}{benefFmt.ttc} TTC)</span>
-            </div>
-          </div>
-
-          {/* Payment box - stretches to fill remaining height */}
-          <div className="flex-1 border-t-2 border-blue-200 bg-blue-50 p-6 rounded-b border-2 border-slate-200 border-t-blue-200 flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-sm font-bold text-gray-800 mb-1">
-                {language === 'fr' ? 'LE BÉNÉFICIAIRE DOIT PAYER' : 'BENEFICIARY MUST PAY'}
-              </p>
-              <p className="text-3xl font-bold text-gray-800">
-                {currency}{benefFmt.ttc}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* HOUR DETAILS - Right */}
-        <div className="space-y-4">
+      {/* HOUR DETAILS TABLES - Full width */}
+      <div className="space-y-4">
           {/* REGULAR HOURS - Always shown on top */}
           {caregiversByType.regular.length > 0 && (
             <div>
               <div className="bg-teal-100 px-3 py-2 font-semibold text-gray-800 border-b-2 border-teal-200">
                 {language === 'fr' ? 'HEURES NORMALES' : 'NORMAL HOURS'} - {formatNumber(displayRate, 2, language)}€ HT/h
               </div>
-              <table className="w-full text-xs md:text-sm">
+              <table className="w-full text-xs md:text-sm table-fixed">
+                <colgroup>
+                  <col className="w-auto" />
+                  <col className="w-32" />
+                  <col className="w-28" />
+                  <col className="w-28" />
+                  <col className="w-28" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-gray-300 bg-teal-50 text-gray-800">
                     <th className="text-left p-2">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</th>
@@ -634,7 +590,7 @@ export default function CaregiverBreakdown({
                     </tr>
                   ))}
                   <tr className="border-t-2 border-teal-200 bg-teal-100 text-gray-800 font-semibold">
-                    <td className="p-2">TOTAL</td>
+                    <td className="p-2">{language === 'fr' ? 'SOUS-TOTAL' : 'SUBTOTAL'}</td>
                     <td className="text-right p-2 font-mono">
                       {formatNumber(totals.regularHours, 2, language)}h<br/>
                       <span className="text-[10px]">{decimalToHHMM(totals.regularHours)}</span>
@@ -657,7 +613,14 @@ export default function CaregiverBreakdown({
                   ({language === 'fr' ? 'Dimanches, jours fériés, avant 8h ou après 20h' : 'Sundays, holidays, before 8 AM or after 8 PM'})
                 </span>
               </div>
-              <table className="w-full text-xs md:text-sm">
+              <table className="w-full text-xs md:text-sm table-fixed">
+                <colgroup>
+                  <col className="w-auto" />
+                  <col className="w-32" />
+                  <col className="w-28" />
+                  <col className="w-28" />
+                  <col className="w-28" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-gray-300 bg-teal-500 text-white">
                     <th className="text-left p-2">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</th>
@@ -688,7 +651,7 @@ export default function CaregiverBreakdown({
                     </tr>
                   ))}
                   <tr className="border-t-2 border-teal-700 bg-teal-600 text-white font-semibold">
-                    <td className="p-2">TOTAL</td>
+                    <td className="p-2">{language === 'fr' ? 'SOUS-TOTAL' : 'SUBTOTAL'}</td>
                     <td className="text-right p-2 font-mono">
                       {formatNumber(totals.holiday25Hours, 2, language)}h<br/>
                       <span className="text-[10px]">{decimalToHHMM(totals.holiday25Hours)}</span>
@@ -711,7 +674,14 @@ export default function CaregiverBreakdown({
                   ({language === 'fr' ? '1er mai et 25 décembre uniquement' : 'May 1st and December 25th only'})
                 </span>
               </div>
-              <table className="w-full text-xs md:text-sm">
+              <table className="w-full text-xs md:text-sm table-fixed">
+                <colgroup>
+                  <col className="w-auto" />
+                  <col className="w-32" />
+                  <col className="w-28" />
+                  <col className="w-28" />
+                  <col className="w-28" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-gray-300 bg-teal-600 text-white">
                     <th className="text-left p-2">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</th>
@@ -742,7 +712,7 @@ export default function CaregiverBreakdown({
                     </tr>
                   ))}
                   <tr className="border-t-2 border-teal-800 bg-teal-700 text-white font-semibold">
-                    <td className="p-2">TOTAL</td>
+                    <td className="p-2">{language === 'fr' ? 'SOUS-TOTAL' : 'SUBTOTAL'}</td>
                     <td className="text-right p-2 font-mono">
                       {formatNumber(totals.holiday100Hours, 2, language)}h<br/>
                       <span className="text-[10px]">{decimalToHHMM(totals.holiday100Hours)}</span>
@@ -755,7 +725,54 @@ export default function CaregiverBreakdown({
               </table>
             </div>
           )}
+
+        {/* TOTAL TABLE */}
+        <div className="mt-4">
+          <table className="w-full text-xs md:text-sm table-fixed">
+            <colgroup>
+              <col className="w-auto" />
+              <col className="w-32" />
+              <col className="w-28" />
+              <col className="w-28" />
+              <col className="w-28" />
+            </colgroup>
+            <tbody>
+              <tr className="border-b border-slate-300 bg-slate-200 text-gray-900 font-semibold">
+                <td className="p-2">{language === 'fr' ? 'TOTAL HT' : 'TOTAL (excl. VAT)'}</td>
+                <td className="text-right p-2 font-mono">{formatNumber(totals.totalHours, 2, language)}h</td>
+                <td className="text-right p-2 font-mono">{totalFmt.ht}€</td>
+                <td className="text-right p-2 font-mono">{apaFmt.ht}€</td>
+                <td className="text-right p-2 font-mono">{benefFmt.ht}€</td>
+              </tr>
+              <tr className="border-b border-slate-300 bg-slate-100 text-gray-700">
+                <td className="p-2">{language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}</td>
+                <td className="text-right p-2 font-mono"></td>
+                <td className="text-right p-2 font-mono">{totalFmt.tva}€</td>
+                <td className="text-right p-2 font-mono">{apaFmt.tva}€</td>
+                <td className="text-right p-2 font-mono">{benefFmt.tva}€</td>
+              </tr>
+              <tr className="bg-slate-600 text-white font-bold">
+                <td className="p-2">{language === 'fr' ? 'TOTAL TTC' : 'TOTAL (incl. VAT)'}</td>
+                <td className="text-right p-2 font-mono"></td>
+                <td className="text-right p-2 font-mono">{totalFmt.ttc}€</td>
+                <td className="text-right p-2 font-mono">{apaFmt.ttc}€</td>
+                <td className="text-right p-2 font-mono">{benefFmt.ttc}€</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+      </div>
+
+      {/* PAYMENT BOX */}
+      <div className="bg-blue-50 p-6 rounded border-2 border-blue-200 text-center">
+        <p className="text-sm md:text-base font-bold text-gray-800 mb-2">
+          {language === 'fr'
+            ? `${beneficiaryName ? beneficiaryName.toUpperCase() : 'LE BÉNÉFICIAIRE'} DOIT PAYER POUR ${monthName.toUpperCase()}`
+            : `${beneficiaryName ? beneficiaryName.toUpperCase() : 'BENEFICIARY'} MUST PAY FOR ${monthName.toUpperCase()}`}
+        </p>
+        <p className="text-3xl md:text-4xl font-bold text-gray-800">
+          {benefFmt.ttc}€
+        </p>
       </div>
 
       {/* TRACKING SECTION */}
@@ -769,7 +786,9 @@ export default function CaregiverBreakdown({
           <div>
             <div className="bg-slate-50 p-4 md:p-6 rounded space-y-2 text-sm md:text-base border-2 border-slate-200 h-full">
               <h3 className="text-base md:text-lg font-semibold text-slate-800 mb-3">
-                {language === 'fr' ? `TARIFS ${selectedMonth.getFullYear()}` : `${selectedMonth.getFullYear()} RATES`}
+                {language === 'fr'
+                  ? `TARIFS HORAIRE HT ${format(selectedMonth, 'MMMM yyyy', { locale }).toUpperCase()}`
+                  : `HOURLY RATES (excl. VAT) ${format(selectedMonth, 'MMMM yyyy', { locale }).toUpperCase()}`}
                 {ratesVaryInMonth && (
                   <span className="text-xs font-normal text-amber-700 ml-2">
                     ⚠ {language === 'fr' ? 'Variables ce mois' : 'Variable this month'}

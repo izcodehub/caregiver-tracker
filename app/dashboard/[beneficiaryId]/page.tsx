@@ -1149,11 +1149,13 @@ export default function DashboardPage() {
               regularRate={elderly.regular_rate || 15}
               rateHistory={rateHistory}
               conventionedRate={elderly.conventioned_rate}
+              apaMonthlyHours={elderly.apa_monthly_hours}
               currency={elderly.currency || 'EUR'}
               copayPercentage={elderly.ticket_moderateur || 0}
               caregiverColors={caregiverColors}
               dailyNotes={dailyNotes}
               timezone={timezone}
+              beneficiaryName={elderly.name}
             />
           </div>
         )}
