@@ -324,8 +324,11 @@ export function exportFinancialSummaryToPDF(
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0); // black
+  const paymentText = language === 'fr'
+    ? `${beneficiaryName.toUpperCase()} DOIT PAYER POUR ${monthName.toUpperCase()}`
+    : `${beneficiaryName.toUpperCase()} MUST PAY FOR ${monthName.toUpperCase()}`;
   doc.text(
-    language === 'fr' ? 'LE BÉNÉFICIAIRE DOIT PAYER' : 'BENEFICIARY MUST PAY',
+    paymentText,
     105,
     yPos + 4,
     { align: 'center' }
@@ -339,16 +342,15 @@ export function exportFinancialSummaryToPDF(
   doc.setLineWidth(0.1); // reset line width
   yPos += 24;
 
-  // ========== SUIVI SECTION ==========
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text(language === 'fr' ? 'SUIVI' : 'TRACKING', 14, yPos);
-  yPos += 7;
-
   // TARIFS APPLICABLES table
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${language === 'fr' ? 'TARIFS' : 'RATES'} ${selectedMonth.getFullYear()}`, 14, yPos);
+  const tarifMonthYear = format(selectedMonth, 'MMMM yyyy', { locale: language === 'fr' ? fr : enUS });
+  doc.text(
+    language === 'fr' ? `TARIFS HORAIRE HT ${tarifMonthYear.toUpperCase()}` : `HOURLY RATES (excl. VAT) ${tarifMonthYear.toUpperCase()}`,
+    14,
+    yPos
+  );
   yPos += 5;
 
   const tarifData = [
