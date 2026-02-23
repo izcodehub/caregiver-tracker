@@ -457,7 +457,7 @@ export default function CaregiverBreakdown({
   return (
     <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
       <h2 className="text-lg md:text-xl font-semibold text-gray-800 mb-4 uppercase">
-        {t('financial.title')} - {format(selectedMonth, 'MMMM yyyy', { locale })} [v2]
+        {t('financial.title')} - {format(selectedMonth, 'MMMM yyyy', { locale })}
       </h2>
 
       {summaries.length === 0 ? (
@@ -555,49 +555,46 @@ export default function CaregiverBreakdown({
       <div className="space-y-4">
           {/* REGULAR HOURS - Always shown on top */}
           {caregiversByType.regular.length > 0 && (
-            <div className="overflow-x-auto -mx-4 md:-mx-6 px-4 md:px-6">
-              <div className="bg-teal-100 px-3 py-2 font-semibold text-gray-800 border-b-2 border-teal-200">
+            <div>
+              <div className="bg-teal-100 px-3 py-2 font-semibold text-gray-800 border-b-2 border-teal-200 text-xs md:text-sm">
                 {language === 'fr' ? 'HEURES NORMALES' : 'NORMAL HOURS'} - {formatNumber(displayRate, 2, language)}€ HT/h
               </div>
-              <table className="w-full text-xs md:text-sm table-fixed min-w-[600px]">
-                <colgroup>
-                  <col className="w-auto" />
-                  <col className="w-32" />
-                  <col className="w-28" />
-                  <col className="w-28" />
-                  <col className="w-28" />
-                </colgroup>
+              <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-gray-300 bg-teal-50 text-gray-800">
-                    <th className="text-left p-2">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</th>
-                    <th className="text-right p-2">{language === 'fr' ? 'Heures' : 'Hours'}</th>
-                    <th className="text-right p-2">{language === 'fr' ? 'Facturé' : 'Billed'}</th>
-                    <th className="text-right p-2">APA</th>
-                    <th className="text-right p-2">{language === 'fr' ? 'Bénéfic.' : 'Benef.'}</th>
+                    <th className="text-left p-1 md:p-2">{language === 'fr' ? 'Nom' : 'Name'}</th>
+                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'H.' : 'H.'}</th>
+                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'Fact.' : 'Bill'}</th>
+                    <th className="text-right p-1 md:p-2">APA</th>
+                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'Bén.' : 'Ben.'}</th>
                   </tr>
                 </thead>
                 <tbody className="text-gray-800">
                   {caregiversByType.regular.map((cg, idx) => (
                     <tr key={idx} className="border-b border-gray-200 bg-white">
-                      <td className="p-2">{cg.name}</td>
-                      <td className="text-right p-2 font-mono">
-                        {formatNumber(cg.hours, 2, language)}h<br/>
-                        <span className="text-[10px] text-gray-500">{decimalToHHMM(cg.hours)}</span>
+                      <td className="p-1 md:p-2 text-[11px] md:text-xs">{cg.name}</td>
+                      <td className="text-right p-1 md:p-2 font-mono">
+                        <span className="hidden md:inline">{formatNumber(cg.hours, 2, language)}h</span>
+                        <span className="md:hidden">{formatNumber(cg.hours, 1, language)}</span>
+                        <br className="hidden md:inline"/>
+                        <span className="text-[9px] md:text-[10px] text-gray-500 hidden md:inline">{decimalToHHMM(cg.hours)}</span>
                       </td>
-                      <td className="text-right p-2 font-mono">{formatNumber(cg.amount, 2, language)}€</td>
-                      <td className="text-right p-2 font-mono">{formatNumber(cg.hours * apaPerHour, 2, language)}€</td>
-                      <td className="text-right p-2 font-mono">{formatNumber(cg.hours * benefNormal, 2, language)}€</td>
+                      <td className="text-right p-1 md:p-2 font-mono">{formatNumber(cg.amount, 0, language)}€</td>
+                      <td className="text-right p-1 md:p-2 font-mono">{formatNumber(cg.hours * apaPerHour, 0, language)}€</td>
+                      <td className="text-right p-1 md:p-2 font-mono">{formatNumber(cg.hours * benefNormal, 0, language)}€</td>
                     </tr>
                   ))}
                   <tr className="border-t-2 border-teal-200 bg-teal-100 text-gray-800 font-semibold">
-                    <td className="p-2">{language === 'fr' ? 'SOUS-TOTAL' : 'SUBTOTAL'}</td>
-                    <td className="text-right p-2 font-mono">
-                      {formatNumber(totals.regularHours, 2, language)}h<br/>
-                      <span className="text-[10px]">{decimalToHHMM(totals.regularHours)}</span>
+                    <td className="p-1 md:p-2 text-[11px] md:text-xs">{language === 'fr' ? 'SOUS-TOTAL' : 'SUBTOTAL'}</td>
+                    <td className="text-right p-1 md:p-2 font-mono">
+                      <span className="hidden md:inline">{formatNumber(totals.regularHours, 2, language)}h</span>
+                      <span className="md:hidden">{formatNumber(totals.regularHours, 1, language)}</span>
+                      <br className="hidden md:inline"/>
+                      <span className="text-[9px] md:text-[10px] hidden md:inline">{decimalToHHMM(totals.regularHours)}</span>
                     </td>
-                    <td className="text-right p-2 font-mono">{formatNumber(totals.regularAmount, 2, language)}€</td>
-                    <td className="text-right p-2 font-mono">{formatNumber(totals.regularHours * apaPerHour, 2, language)}€</td>
-                    <td className="text-right p-2 font-mono">{formatNumber(totals.regularHours * benefNormal, 2, language)}€</td>
+                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.regularAmount, 0, language)}€</td>
+                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.regularHours * apaPerHour, 0, language)}€</td>
+                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.regularHours * benefNormal, 0, language)}€</td>
                   </tr>
                 </tbody>
               </table>

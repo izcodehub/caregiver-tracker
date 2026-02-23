@@ -96,7 +96,7 @@ export function exportFinancialSummaryToPDF(
   // ========== DÉTAIL DES HEURES ==========
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text(language === 'fr' ? 'DÉTAIL DES HEURES' : 'HOUR DETAILS', 196, yPos, { align: 'right' });
+  doc.text(language === 'fr' ? 'DÉTAIL DES HEURES' : 'HOUR DETAILS', 14, yPos);
   yPos += 7;
 
   // HEURES NORMALES table
@@ -131,7 +131,7 @@ export function exportFinancialSummaryToPDF(
       headStyles: { fillColor: [204, 251, 241], textColor: [31, 41, 55], fontSize: 7, fontStyle: 'bold' }, // teal-100 with gray-800 text
       bodyStyles: { fontSize: 7, textColor: [31, 41, 55] },
       columnStyles: {
-        0: { cellWidth: 70 },
+        0: { cellWidth: 70, halign: 'left' },
         1: { cellWidth: 28, halign: 'right' },
         2: { cellWidth: 28, halign: 'right' },
         3: { cellWidth: 28, halign: 'right' },
@@ -183,7 +183,7 @@ export function exportFinancialSummaryToPDF(
       headStyles: { fillColor: [8, 145, 178], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold' }, // teal-600
       bodyStyles: { fontSize: 7, textColor: [31, 41, 55] }, // gray-800 text for caregiver rows
       columnStyles: {
-        0: { cellWidth: 70 },
+        0: { cellWidth: 70, halign: 'left' },
         1: { cellWidth: 28, halign: 'right' },
         2: { cellWidth: 28, halign: 'right' },
         3: { cellWidth: 28, halign: 'right' },
@@ -235,7 +235,7 @@ export function exportFinancialSummaryToPDF(
       headStyles: { fillColor: [15, 118, 110], textColor: [255, 255, 255], fontSize: 7, fontStyle: 'bold' }, // teal-700
       bodyStyles: { fontSize: 7, textColor: [31, 41, 55] }, // gray-800 text for caregiver rows
       columnStyles: {
-        0: { cellWidth: 70 },
+        0: { cellWidth: 70, halign: 'left' },
         1: { cellWidth: 28, halign: 'right' },
         2: { cellWidth: 28, halign: 'right' },
         3: { cellWidth: 28, halign: 'right' },
@@ -285,7 +285,7 @@ export function exportFinancialSummaryToPDF(
     body: totalData,
     bodyStyles: { fontSize: 7, fontStyle: 'bold' },
     columnStyles: {
-      0: { cellWidth: 70 },
+      0: { cellWidth: 70, halign: 'left' },
       1: { cellWidth: 28, halign: 'right' },
       2: { cellWidth: 28, halign: 'right' },
       3: { cellWidth: 28, halign: 'right' },
@@ -348,9 +348,8 @@ export function exportFinancialSummaryToPDF(
   const tarifMonthYear = format(selectedMonth, 'MMMM yyyy', { locale: language === 'fr' ? fr : enUS });
   doc.text(
     language === 'fr' ? `TARIFS HORAIRE HT ${tarifMonthYear.toUpperCase()}` : `HOURLY RATES (excl. VAT) ${tarifMonthYear.toUpperCase()}`,
-    196,
-    yPos,
-    { align: 'right' }
+    14,
+    yPos
   );
   yPos += 5;
 
@@ -387,7 +386,7 @@ export function exportFinancialSummaryToPDF(
     headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' }, // slate-600
     bodyStyles: { fontSize: 8, textColor: [51, 65, 85] }, // slate-800
     columnStyles: {
-      0: { cellWidth: 75 },
+      0: { cellWidth: 75, halign: 'left' },
       1: { cellWidth: 37, halign: 'right' },
       2: { cellWidth: 37, halign: 'right' },
       3: { cellWidth: 37, halign: 'right' }
