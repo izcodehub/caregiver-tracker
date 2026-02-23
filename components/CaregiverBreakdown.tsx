@@ -559,42 +559,68 @@ export default function CaregiverBreakdown({
               <div className="bg-teal-100 px-3 py-2 font-semibold text-gray-800 border-b-2 border-teal-200 text-xs md:text-sm">
                 {language === 'fr' ? 'HEURES NORMALES' : 'NORMAL HOURS'} - {formatNumber(displayRate, 2, language)}€ HT/h
               </div>
-              <table className="w-full text-xs">
+              <table className="w-full text-xs md:text-sm">
                 <thead>
                   <tr className="border-b border-gray-300 bg-teal-50 text-gray-800">
-                    <th className="text-left p-1 md:p-2">{language === 'fr' ? 'Nom' : 'Name'}</th>
-                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'H.' : 'H.'}</th>
-                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'Fact.' : 'Bill'}</th>
+                    <th className="text-left p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'Nom' : 'Name'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</span>
+                    </th>
+                    <th className="text-right p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'H.' : 'H.'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Heures' : 'Hours'}</span>
+                    </th>
+                    <th className="text-right p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'Fact.' : 'Bill'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Facturé' : 'Billed'}</span>
+                    </th>
                     <th className="text-right p-1 md:p-2">APA</th>
-                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'Bén.' : 'Ben.'}</th>
+                    <th className="text-right p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'Bén.' : 'Ben.'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Bénéficiaire' : 'Beneficiary'}</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="text-gray-800">
                   {caregiversByType.regular.map((cg, idx) => (
                     <tr key={idx} className="border-b border-gray-200 bg-white">
-                      <td className="p-1 md:p-2 text-[11px] md:text-xs">{cg.name}</td>
+                      <td className="p-1 md:p-2 text-[11px] md:text-sm">{cg.name}</td>
                       <td className="text-right p-1 md:p-2 font-mono">
-                        <span className="hidden md:inline">{formatNumber(cg.hours, 2, language)}h</span>
                         <span className="md:hidden">{formatNumber(cg.hours, 1, language)}</span>
-                        <br className="hidden md:inline"/>
-                        <span className="text-[9px] md:text-[10px] text-gray-500 hidden md:inline">{decimalToHHMM(cg.hours)}</span>
+                        <span className="hidden md:inline">{formatNumber(cg.hours, 2, language)}h<br/><span className="text-[10px] text-gray-500">{decimalToHHMM(cg.hours)}</span></span>
                       </td>
-                      <td className="text-right p-1 md:p-2 font-mono">{formatNumber(cg.amount, 0, language)}€</td>
-                      <td className="text-right p-1 md:p-2 font-mono">{formatNumber(cg.hours * apaPerHour, 0, language)}€</td>
-                      <td className="text-right p-1 md:p-2 font-mono">{formatNumber(cg.hours * benefNormal, 0, language)}€</td>
+                      <td className="text-right p-1 md:p-2 font-mono">
+                        <span className="md:hidden">{formatNumber(cg.amount, 0, language)}€</span>
+                        <span className="hidden md:inline">{formatNumber(cg.amount, 2, language)}€</span>
+                      </td>
+                      <td className="text-right p-1 md:p-2 font-mono">
+                        <span className="md:hidden">{formatNumber(cg.hours * apaPerHour, 0, language)}€</span>
+                        <span className="hidden md:inline">{formatNumber(cg.hours * apaPerHour, 2, language)}€</span>
+                      </td>
+                      <td className="text-right p-1 md:p-2 font-mono">
+                        <span className="md:hidden">{formatNumber(cg.hours * benefNormal, 0, language)}€</span>
+                        <span className="hidden md:inline">{formatNumber(cg.hours * benefNormal, 2, language)}€</span>
+                      </td>
                     </tr>
                   ))}
                   <tr className="border-t-2 border-teal-200 bg-teal-100 text-gray-800 font-semibold">
-                    <td className="p-1 md:p-2 text-[11px] md:text-xs">{language === 'fr' ? 'SOUS-TOTAL' : 'SUBTOTAL'}</td>
+                    <td className="p-1 md:p-2 text-[11px] md:text-sm">{language === 'fr' ? 'SOUS-TOTAL' : 'SUBTOTAL'}</td>
                     <td className="text-right p-1 md:p-2 font-mono">
-                      <span className="hidden md:inline">{formatNumber(totals.regularHours, 2, language)}h</span>
                       <span className="md:hidden">{formatNumber(totals.regularHours, 1, language)}</span>
-                      <br className="hidden md:inline"/>
-                      <span className="text-[9px] md:text-[10px] hidden md:inline">{decimalToHHMM(totals.regularHours)}</span>
+                      <span className="hidden md:inline">{formatNumber(totals.regularHours, 2, language)}h<br/><span className="text-[10px]">{decimalToHHMM(totals.regularHours)}</span></span>
                     </td>
-                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.regularAmount, 0, language)}€</td>
-                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.regularHours * apaPerHour, 0, language)}€</td>
-                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.regularHours * benefNormal, 0, language)}€</td>
+                    <td className="text-right p-1 md:p-2 font-mono">
+                      <span className="md:hidden">{formatNumber(totals.regularAmount, 0, language)}€</span>
+                      <span className="hidden md:inline">{formatNumber(totals.regularAmount, 2, language)}€</span>
+                    </td>
+                    <td className="text-right p-1 md:p-2 font-mono">
+                      <span className="md:hidden">{formatNumber(totals.regularHours * apaPerHour, 0, language)}€</span>
+                      <span className="hidden md:inline">{formatNumber(totals.regularHours * apaPerHour, 2, language)}€</span>
+                    </td>
+                    <td className="text-right p-1 md:p-2 font-mono">
+                      <span className="md:hidden">{formatNumber(totals.regularHours * benefNormal, 0, language)}€</span>
+                      <span className="hidden md:inline">{formatNumber(totals.regularHours * benefNormal, 2, language)}€</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -610,38 +636,68 @@ export default function CaregiverBreakdown({
                   ({language === 'fr' ? 'Dimanches, jours fériés, avant 8h ou après 20h' : 'Sundays, holidays, before 8 AM or after 8 PM'})
                 </span>
               </div>
-              <table className="w-full text-xs">
+              <table className="w-full text-xs md:text-sm">
                 <thead>
                   <tr className="border-b border-gray-300 bg-teal-500 text-white">
-                    <th className="text-left p-1 md:p-2">{language === 'fr' ? 'Nom' : 'Name'}</th>
-                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'H.' : 'H.'}</th>
-                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'Fact.' : 'Bill'}</th>
+                    <th className="text-left p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'Nom' : 'Name'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</span>
+                    </th>
+                    <th className="text-right p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'H.' : 'H.'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Heures' : 'Hours'}</span>
+                    </th>
+                    <th className="text-right p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'Fact.' : 'Bill'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Facturé' : 'Billed'}</span>
+                    </th>
                     <th className="text-right p-1 md:p-2">APA</th>
-                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'Bén.' : 'Ben.'}</th>
+                    <th className="text-right p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'Bén.' : 'Ben.'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Bénéficiaire' : 'Beneficiary'}</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="text-gray-800">
                   {caregiversByType.holiday25.map((cg, idx) => (
                     <tr key={idx} className="border-b border-gray-200 bg-white">
-                      <td className="p-1 md:p-2 align-top text-[11px] md:text-xs">{cg.name}</td>
-                      <td className="text-right p-1 md:p-2 font-mono align-top">
-                        <span className="hidden md:inline">{formatNumber(cg.hours, 2, language)}h</span>
+                      <td className="p-1 md:p-2 text-[11px] md:text-sm">{cg.name}</td>
+                      <td className="text-right p-1 md:p-2 font-mono">
                         <span className="md:hidden">{formatNumber(cg.hours, 1, language)}</span>
+                        <span className="hidden md:inline">{formatNumber(cg.hours, 2, language)}h<br/><span className="text-[10px] text-gray-500">{decimalToHHMM(cg.hours)}</span></span>
                       </td>
-                      <td className="text-right p-1 md:p-2 font-mono align-top">{formatNumber(cg.amount, 0, language)}€</td>
-                      <td className="text-right p-1 md:p-2 font-mono align-top">{formatNumber(cg.hours * apaPerHour, 0, language)}€</td>
-                      <td className="text-right p-1 md:p-2 font-mono align-top">{formatNumber(cg.hours * benef25, 0, language)}€</td>
+                      <td className="text-right p-1 md:p-2 font-mono">
+                        <span className="md:hidden">{formatNumber(cg.amount, 0, language)}€</span>
+                        <span className="hidden md:inline">{formatNumber(cg.amount, 2, language)}€</span>
+                      </td>
+                      <td className="text-right p-1 md:p-2 font-mono">
+                        <span className="md:hidden">{formatNumber(cg.hours * apaPerHour, 0, language)}€</span>
+                        <span className="hidden md:inline">{formatNumber(cg.hours * apaPerHour, 2, language)}€</span>
+                      </td>
+                      <td className="text-right p-1 md:p-2 font-mono">
+                        <span className="md:hidden">{formatNumber(cg.hours * benef25, 0, language)}€</span>
+                        <span className="hidden md:inline">{formatNumber(cg.hours * benef25, 2, language)}€</span>
+                      </td>
                     </tr>
                   ))}
                   <tr className="border-t-2 border-teal-700 bg-teal-600 text-white font-semibold">
-                    <td className="p-1 md:p-2 text-[11px] md:text-xs">{language === 'fr' ? 'SOUS-TOTAL' : 'SUBTOTAL'}</td>
+                    <td className="p-1 md:p-2 text-[11px] md:text-sm">{language === 'fr' ? 'SOUS-TOTAL' : 'SUBTOTAL'}</td>
                     <td className="text-right p-1 md:p-2 font-mono">
-                      <span className="hidden md:inline">{formatNumber(totals.holiday25Hours, 2, language)}h</span>
                       <span className="md:hidden">{formatNumber(totals.holiday25Hours, 1, language)}</span>
+                      <span className="hidden md:inline">{formatNumber(totals.holiday25Hours, 2, language)}h<br/><span className="text-[10px]">{decimalToHHMM(totals.holiday25Hours)}</span></span>
                     </td>
-                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.holiday25Amount, 0, language)}€</td>
-                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.holiday25Hours * apaPerHour, 0, language)}€</td>
-                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.holiday25Hours * benef25, 0, language)}€</td>
+                    <td className="text-right p-1 md:p-2 font-mono">
+                      <span className="md:hidden">{formatNumber(totals.holiday25Amount, 0, language)}€</span>
+                      <span className="hidden md:inline">{formatNumber(totals.holiday25Amount, 2, language)}€</span>
+                    </td>
+                    <td className="text-right p-1 md:p-2 font-mono">
+                      <span className="md:hidden">{formatNumber(totals.holiday25Hours * apaPerHour, 0, language)}€</span>
+                      <span className="hidden md:inline">{formatNumber(totals.holiday25Hours * apaPerHour, 2, language)}€</span>
+                    </td>
+                    <td className="text-right p-1 md:p-2 font-mono">
+                      <span className="md:hidden">{formatNumber(totals.holiday25Hours * benef25, 0, language)}€</span>
+                      <span className="hidden md:inline">{formatNumber(totals.holiday25Hours * benef25, 2, language)}€</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -657,38 +713,68 @@ export default function CaregiverBreakdown({
                   ({language === 'fr' ? '1er mai et 25 décembre uniquement' : 'May 1st and December 25th only'})
                 </span>
               </div>
-              <table className="w-full text-xs">
+              <table className="w-full text-xs md:text-sm">
                 <thead>
                   <tr className="border-b border-gray-300 bg-teal-600 text-white">
-                    <th className="text-left p-1 md:p-2">{language === 'fr' ? 'Nom' : 'Name'}</th>
-                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'H.' : 'H.'}</th>
-                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'Fact.' : 'Bill'}</th>
+                    <th className="text-left p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'Nom' : 'Name'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Aide-soignant' : 'Caregiver'}</span>
+                    </th>
+                    <th className="text-right p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'H.' : 'H.'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Heures' : 'Hours'}</span>
+                    </th>
+                    <th className="text-right p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'Fact.' : 'Bill'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Facturé' : 'Billed'}</span>
+                    </th>
                     <th className="text-right p-1 md:p-2">APA</th>
-                    <th className="text-right p-1 md:p-2">{language === 'fr' ? 'Bén.' : 'Ben.'}</th>
+                    <th className="text-right p-1 md:p-2">
+                      <span className="md:hidden">{language === 'fr' ? 'Bén.' : 'Ben.'}</span>
+                      <span className="hidden md:inline">{language === 'fr' ? 'Bénéficiaire' : 'Beneficiary'}</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="text-gray-800">
                   {caregiversByType.holiday100.map((cg, idx) => (
                     <tr key={idx} className="border-b border-gray-200 bg-white">
-                      <td className="p-1 md:p-2 align-top text-[11px] md:text-xs">{cg.name}</td>
-                      <td className="text-right p-1 md:p-2 font-mono align-top">
-                        <span className="hidden md:inline">{formatNumber(cg.hours, 2, language)}h</span>
+                      <td className="p-1 md:p-2 text-[11px] md:text-sm">{cg.name}</td>
+                      <td className="text-right p-1 md:p-2 font-mono">
                         <span className="md:hidden">{formatNumber(cg.hours, 1, language)}</span>
+                        <span className="hidden md:inline">{formatNumber(cg.hours, 2, language)}h<br/><span className="text-[10px] text-gray-500">{decimalToHHMM(cg.hours)}</span></span>
                       </td>
-                      <td className="text-right p-1 md:p-2 font-mono align-top">{formatNumber(cg.amount, 0, language)}€</td>
-                      <td className="text-right p-1 md:p-2 font-mono align-top">{formatNumber(cg.hours * apaPerHour, 0, language)}€</td>
-                      <td className="text-right p-1 md:p-2 font-mono align-top">{formatNumber(cg.hours * benef100, 0, language)}€</td>
+                      <td className="text-right p-1 md:p-2 font-mono">
+                        <span className="md:hidden">{formatNumber(cg.amount, 0, language)}€</span>
+                        <span className="hidden md:inline">{formatNumber(cg.amount, 2, language)}€</span>
+                      </td>
+                      <td className="text-right p-1 md:p-2 font-mono">
+                        <span className="md:hidden">{formatNumber(cg.hours * apaPerHour, 0, language)}€</span>
+                        <span className="hidden md:inline">{formatNumber(cg.hours * apaPerHour, 2, language)}€</span>
+                      </td>
+                      <td className="text-right p-1 md:p-2 font-mono">
+                        <span className="md:hidden">{formatNumber(cg.hours * benef100, 0, language)}€</span>
+                        <span className="hidden md:inline">{formatNumber(cg.hours * benef100, 2, language)}€</span>
+                      </td>
                     </tr>
                   ))}
                   <tr className="border-t-2 border-teal-800 bg-teal-700 text-white font-semibold">
-                    <td className="p-1 md:p-2 text-[11px] md:text-xs">{language === 'fr' ? 'SOUS-TOTAL' : 'SUBTOTAL'}</td>
+                    <td className="p-1 md:p-2 text-[11px] md:text-sm">{language === 'fr' ? 'SOUS-TOTAL' : 'SUBTOTAL'}</td>
                     <td className="text-right p-1 md:p-2 font-mono">
-                      <span className="hidden md:inline">{formatNumber(totals.holiday100Hours, 2, language)}h</span>
                       <span className="md:hidden">{formatNumber(totals.holiday100Hours, 1, language)}</span>
+                      <span className="hidden md:inline">{formatNumber(totals.holiday100Hours, 2, language)}h<br/><span className="text-[10px]">{decimalToHHMM(totals.holiday100Hours)}</span></span>
                     </td>
-                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.holiday100Amount, 0, language)}€</td>
-                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.holiday100Hours * apaPerHour, 0, language)}€</td>
-                    <td className="text-right p-1 md:p-2 font-mono">{formatNumber(totals.holiday100Hours * benef100, 0, language)}€</td>
+                    <td className="text-right p-1 md:p-2 font-mono">
+                      <span className="md:hidden">{formatNumber(totals.holiday100Amount, 0, language)}€</span>
+                      <span className="hidden md:inline">{formatNumber(totals.holiday100Amount, 2, language)}€</span>
+                    </td>
+                    <td className="text-right p-1 md:p-2 font-mono">
+                      <span className="md:hidden">{formatNumber(totals.holiday100Hours * apaPerHour, 0, language)}€</span>
+                      <span className="hidden md:inline">{formatNumber(totals.holiday100Hours * apaPerHour, 2, language)}€</span>
+                    </td>
+                    <td className="text-right p-1 md:p-2 font-mono">
+                      <span className="md:hidden">{formatNumber(totals.holiday100Hours * benef100, 0, language)}€</span>
+                      <span className="hidden md:inline">{formatNumber(totals.holiday100Hours * benef100, 2, language)}€</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -697,27 +783,27 @@ export default function CaregiverBreakdown({
 
         {/* TOTAL TABLE */}
         <div className="mt-4">
-          <table className="w-full text-xs">
+          <table className="w-full text-xs md:text-sm">
             <tbody>
               <tr className="border-b border-slate-300 bg-slate-200 text-gray-900 font-semibold">
-                <td className="p-1 md:p-2 text-[11px] md:text-xs">{language === 'fr' ? 'TOTAL HT' : 'TOTAL (excl. VAT)'}</td>
+                <td className="p-1 md:p-2 text-[11px] md:text-sm">{language === 'fr' ? 'TOTAL HT' : 'TOTAL (excl. VAT)'}</td>
                 <td className="text-right p-1 md:p-2 font-mono">
-                  <span className="hidden md:inline">{formatNumber(totals.totalHours, 2, language)}h</span>
                   <span className="md:hidden">{formatNumber(totals.totalHours, 1, language)}</span>
+                  <span className="hidden md:inline">{formatNumber(totals.totalHours, 2, language)}h<br/><span className="text-[10px]">{decimalToHHMM(totals.totalHours)}</span></span>
                 </td>
                 <td className="text-right p-1 md:p-2 font-mono">{totalFmt.ht}€</td>
                 <td className="text-right p-1 md:p-2 font-mono">{apaFmt.ht}€</td>
                 <td className="text-right p-1 md:p-2 font-mono">{benefFmt.ht}€</td>
               </tr>
               <tr className="border-b border-slate-300 bg-slate-100 text-gray-700">
-                <td className="p-1 md:p-2 text-[11px] md:text-xs">{language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}</td>
+                <td className="p-1 md:p-2 text-[11px] md:text-sm">{language === 'fr' ? 'TVA (5,5%)' : 'VAT (5.5%)'}</td>
                 <td className="text-right p-1 md:p-2 font-mono"></td>
                 <td className="text-right p-1 md:p-2 font-mono">{totalFmt.tva}€</td>
                 <td className="text-right p-1 md:p-2 font-mono">{apaFmt.tva}€</td>
                 <td className="text-right p-1 md:p-2 font-mono">{benefFmt.tva}€</td>
               </tr>
               <tr className="bg-slate-600 text-white font-bold">
-                <td className="p-1 md:p-2 text-[11px] md:text-xs">{language === 'fr' ? 'TOTAL TTC' : 'TOTAL (incl. VAT)'}</td>
+                <td className="p-1 md:p-2 text-[11px] md:text-sm">{language === 'fr' ? 'TOTAL TTC' : 'TOTAL (incl. VAT)'}</td>
                 <td className="text-right p-1 md:p-2 font-mono"></td>
                 <td className="text-right p-1 md:p-2 font-mono">{totalFmt.ttc}€</td>
                 <td className="text-right p-1 md:p-2 font-mono">{apaFmt.ttc}€</td>
