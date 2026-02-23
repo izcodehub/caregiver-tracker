@@ -140,6 +140,10 @@ export function exportFinancialSummaryToPDF(
       margin: { left: 14, right: 14 },
       tableWidth: 182,
       didParseCell: (data: any) => {
+        // Right-align header cells for numeric columns (columns 1-4)
+        if (data.section === 'head' && data.column.index >= 1) {
+          data.cell.styles.halign = 'right';
+        }
         if (data.section === 'body' && data.row.index === normalData.length - 1) {
           // Subtotal row - same color as header
           data.cell.styles.fillColor = [204, 251, 241]; // teal-100
@@ -192,6 +196,10 @@ export function exportFinancialSummaryToPDF(
       margin: { left: 14, right: 14 },
       tableWidth: 182,
       didParseCell: (data: any) => {
+        // Right-align header cells for numeric columns (columns 1-4)
+        if (data.section === 'head' && data.column.index >= 1) {
+          data.cell.styles.halign = 'right';
+        }
         if (data.section === 'body' && data.row.index === holiday25Data.length - 1) {
           // Subtotal row - same color as header
           data.cell.styles.fillColor = [8, 145, 178]; // teal-600
@@ -244,6 +252,10 @@ export function exportFinancialSummaryToPDF(
       margin: { left: 14, right: 14 },
       tableWidth: 182,
       didParseCell: (data: any) => {
+        // Right-align header cells for numeric columns (columns 1-4)
+        if (data.section === 'head' && data.column.index >= 1) {
+          data.cell.styles.halign = 'right';
+        }
         if (data.section === 'body' && data.row.index === holiday100Data.length - 1) {
           // Subtotal row - same color as header
           data.cell.styles.fillColor = [15, 118, 110]; // teal-700
@@ -393,7 +405,13 @@ export function exportFinancialSummaryToPDF(
     },
     margin: { left: 14, right: 14 },
     theme: 'striped',
-    alternateRowStyles: { fillColor: [248, 250, 252] } // slate-50
+    alternateRowStyles: { fillColor: [248, 250, 252] }, // slate-50
+    didParseCell: (data: any) => {
+      // Right-align header cells for numeric columns (columns 1-3)
+      if (data.section === 'head' && data.column.index >= 1) {
+        data.cell.styles.halign = 'right';
+      }
+    }
   });
 
   yPos = (doc as any).lastAutoTable.finalY + 10;
